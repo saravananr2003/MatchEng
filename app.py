@@ -48,14 +48,17 @@ def create_app() -> Flask:
             return jsonify({"error": "Only .csv uploads are supported"}), 400
 
         raw = f.stream.read().decode("utf-8", errors="replace")
-        lines = [ln for ln in raw.splitlines() if ln.strip()]
-        if not lines:
+        # IMPORTANT: Do not filter out whitespace-only lines before CSV parsing.
+        # Multi-line quoted fields can legally contain blank/whitespace-only lines,
+        # and removing them corrupts the CSV structure.
+        raw = raw.lstrip("\ufeff")
+        if not raw.strip():
             return jsonify({"error": "Uploaded CSV is empty"}), 400
 
         import csv
         from io import StringIO
 
-        reader = csv.DictReader(StringIO("\n".join(lines)))
+        reader = csv.DictReader(StringIO(raw, newline=""))
 
         required = {
             "Source Type",
@@ -86,6 +89,9 @@ def create_app() -> Flask:
         }
 
         for row in reader:
+            # Skip completely empty rows (e.g., stray blank lines between records).
+            if not row or not any((v or "").strip() for v in row.values()):
+                continue
             stats["processed"] += 1
             try:
                 source_type = (row.get("Source Type") or "").strip()
