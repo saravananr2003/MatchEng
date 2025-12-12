@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>B2B Record De-dup Matching</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>B2B Record De-dup Matching</h1>
+      <p class="muted">
+        Upload a CSV with columns: <code>Source Type</code>, <code>Source ID</code>,
+        <code>Company Name</code>, <code>Address</code>, <code>Phone Number</code>.
+      </p>
+
+      <section class="card">
+        <form id="uploadForm">
+          <label class="file">
+            <span>CSV file</span>
+            <input id="fileInput" name="file" type="file" accept=".csv" required />
+          </label>
+
+          <button id="uploadBtn" type="submit">Upload & Match</button>
+        </form>
+
+        <div id="status" class="status" hidden></div>
+
+        <div id="result" class="result" hidden>
+          <h2>Result</h2>
+          <ul>
+            <li><strong>Processed:</strong> <span id="processed">0</span></li>
+            <li><strong>Matched existing:</strong> <span id="matched">0</span></li>
+            <li><strong>New DeDup IDs:</strong> <span id="newdedup">0</span></li>
+            <li><strong>Errors:</strong> <span id="errors">0</span></li>
+          </ul>
+          <a id="downloadLink" class="download" href="#" download>Download annotated CSV</a>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Example CSV header</h2>
+        <pre>Source Type,Source ID,Company Name,Address,Phone Number</pre>
+      </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
