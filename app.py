@@ -1,3 +1,4 @@
+import json
 import os
 import uuid
 from datetime import datetime
@@ -15,6 +16,126 @@ from matching import (
 )
 
 
+def load_metadata_config(config_path: Path) -> dict:
+    """Load metadata configuration from JSON file. Returns default config if file doesn't exist."""
+    default_config = {
+        "input_columns": {
+            "SOURCE_TYPE": {
+                "field_type": "Source Fields",
+                "label": "Source Type",
+                "description": "The type of source of the record",
+                "type": "string",
+                "required": True,
+                "active": True,
+                "alternate_names": ["SOURCE_TYPE", "SRC_TYPE"]
+            },
+            "SOURCE_ID": {
+                "field_type": "Source Fields",
+                "label": "Source ID",
+                "description": "The ID of the source of the record",
+                "type": "string",
+                "required": True,
+                "active": True,
+                "alternate_names": ["SOURCE_ID", "SRC_ID"]
+            },
+            "COMPANY_NAME": {
+                "field_type": "Base Fields",
+                "label": "Company Name",
+                "description": "The name of the company",
+                "type": "string",
+                "required": True,
+                "active": True,
+                "alternate_names": ["COMPANY_NAME", "COMP_NAME"]
+            },
+            "ADDRESS": {
+                "field_type": "Address Fields",
+                "label": "Address",
+                "description": "The address of the company",
+                "type": "string",
+                "required": True,
+                "active": True,
+                "alternate_names": ["ADDRESS", "ADDR"]
+            },
+            "PHONE_NUMBER": {
+                "field_type": "Phone Fields",
+                "label": "Phone Number",
+                "description": "The phone number of the company",
+                "type": "string",
+                "required": True,
+                "active": True,
+                "alternate_names": ["PHONE_NUMBER", "PHONE"]
+            }
+        },
+        "output_columns": {
+            "DEDUP_ID": "dedup_id",
+            "MATCH_STATUS": "match_status",
+            "MATCH_SCORE": "match_score",
+            "MATCHED_TO": "matched_to",
+            "ERROR": "error"
+        }
+    }
+    
+    if not config_path.exists():
+        # Create config directory and file with defaults if they don't exist
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        with config_path.open("w", encoding="utf-8") as f:
+            json.dump(default_config, f, indent=4)
+        return default_config
+    
+    try:
+        with config_path.open("r", encoding="utf-8") as f:
+            config = json.load(f)
+            # Ensure input_columns exists
+            if "input_columns" not in config:
+                config["input_columns"] = default_config["input_columns"]
+            # Ensure output_columns exists
+            if "output_columns" not in config:
+                config["output_columns"] = default_config["output_columns"]
+            # Ensure all columns have 'active' field
+            for col_key, col_data in config.get("input_columns", {}).items():
+                if "active" not in col_data:
+                    col_data["active"] = True
+            return config
+    except (json.JSONDecodeError, IOError) as e:
+        # If config file is corrupted, return defaults
+        return default_config
+
+
+def get_required_columns_from_config(config: dict) -> list:
+    """Extract required column names from config, considering alternate names."""
+    required = []
+    input_columns = config.get("input_columns", {})
+    
+    for col_key, col_data in input_columns.items():
+        if col_data.get("active", True) and col_data.get("required", False):
+            # Add the label and all alternate names
+            required.append(col_data.get("label", col_key))
+            required.extend(col_data.get("alternate_names", []))
+    
+    return required
+
+
+def find_column_by_header(header: str, config: dict) -> tuple:
+    """Find the column key and data for a given CSV header."""
+    input_columns = config.get("input_columns", {})
+    header_upper = header.upper().strip()
+    
+    for col_key, col_data in input_columns.items():
+        if not col_data.get("active", True):
+            continue
+        
+        # Check if header matches label
+        if col_data.get("label", "").upper() == header_upper:
+            return col_key, col_data
+        
+        # Check if header matches any alternate name
+        for alt_name in col_data.get("alternate_names", []):
+            if alt_name.upper() == header_upper:
+                return col_key, col_data
+    
+    return None, None
+
+
 def create_app() -> Flask:
     app = Flask(__name__)
 
@@ -24,15 +145,54 @@ def create_app() -> Flask:
     app.config["DB_PATH"] = os.getenv(
         "DB_PATH", str(Path(app.config["DATA_DIR"]) / "matches.db")
     )
+    app.config["METADATA_CONFIG_PATH"] = os.getenv(
+        "METADATA_CONFIG_PATH", str(Path(__file__).parent / "config" / "metadata_config.json")
+    )
 
     Path(app.config["DATA_DIR"]).mkdir(parents=True, exist_ok=True)
     Path(app.config["OUTPUT_DIR"]).mkdir(parents=True, exist_ok=True)
+
+    # Load metadata configuration
+    app.config["METADATA_CONFIG"] = load_metadata_config(Path(app.config["METADATA_CONFIG_PATH"]))
 
     ensure_db(app.config["DB_PATH"])
 
     @app.get("/")
     def index():
         return render_template("index.html")
+    
+    @app.get("/config")
+    def config_page():
+        return render_template("config.html")
+    
+    @app.get("/api/config")
+    def get_config():
+        """Get the current metadata configuration."""
+        return jsonify(app.config["METADATA_CONFIG"])
+    
+    @app.post("/api/config")
+    def update_config():
+        """Update the metadata configuration."""
+        try:
+            new_config = request.get_json()
+            if not new_config:
+                return jsonify({"error": "No configuration data provided"}), 400
+            
+            # Validate structure
+            if "input_columns" not in new_config:
+                return jsonify({"error": "Missing 'input_columns' in configuration"}), 400
+            
+            # Save to file
+            config_path = Path(app.config["METADATA_CONFIG_PATH"])
+            with config_path.open("w", encoding="utf-8") as f:
+                json.dump(new_config, f, indent=4)
+            
+            # Update in-memory config
+            app.config["METADATA_CONFIG"] = new_config
+            
+            return jsonify({"ok": True, "message": "Configuration updated successfully"})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
 
     @app.post("/api/upload")
     def upload():
@@ -56,22 +216,55 @@ def create_app() -> Flask:
         from io import StringIO
 
         reader = csv.DictReader(StringIO("\n".join(lines)))
+        csv_headers = [h.strip() for h in (reader.fieldnames or [])]
 
-        required = {
-            "Source Type",
-            "Source ID",
-            "Company Name",
-            "Address",
-            "Phone Number",
-        }
-        missing = [c for c in required if c not in (reader.fieldnames or [])]
+        # Validate CSV headers against metadata config
+        config = app.config["METADATA_CONFIG"]
+        input_columns = config.get("input_columns", {})
+        
+        # Find required active columns
+        required_cols = {}
+        for col_key, col_data in input_columns.items():
+            if col_data.get("active", True) and col_data.get("required", False):
+                required_cols[col_key] = col_data
+        
+        # Check if all required columns are present (by label or alternate name)
+        missing = []
+        found_mapping = {}
+        
+        for col_key, col_data in required_cols.items():
+            label = col_data.get("label", "")
+            alternate_names = col_data.get("alternate_names", [])
+            
+            # Check if any header matches
+            found = False
+            matched_header = None
+            
+            for header in csv_headers:
+                header_upper = header.upper()
+                if (header_upper == label.upper() or 
+                    header_upper in [alt.upper() for alt in alternate_names]):
+                    found = True
+                    matched_header = header
+                    found_mapping[col_key] = header
+                    break
+            
+            if not found:
+                missing.append({
+                    "column_key": col_key,
+                    "label": label,
+                    "alternate_names": alternate_names
+                })
+        
         if missing:
+            missing_labels = [m["label"] for m in missing]
             return (
                 jsonify(
                     {
                         "error": "Missing required columns",
-                        "missing": missing,
-                        "found": reader.fieldnames or [],
+                        "missing": missing_labels,
+                        "missing_details": missing,
+                        "found": csv_headers,
                     }
                 ),
                 400,
@@ -85,14 +278,50 @@ def create_app() -> Flask:
             "errors": 0,
         }
 
+        # Build mapping from CSV headers to column keys
+        header_to_col_key = {}
+        for col_key, col_data in input_columns.items():
+            if not col_data.get("active", True):
+                continue
+            label = col_data.get("label", "")
+            alternate_names = col_data.get("alternate_names", [])
+            
+            for header in csv_headers:
+                header_upper = header.upper()
+                if (header_upper == label.upper() or 
+                    header_upper in [alt.upper() for alt in alternate_names]):
+                    header_to_col_key[header] = col_key
+                    break
+        
         for row in reader:
             stats["processed"] += 1
             try:
-                source_type = (row.get("Source Type") or "").strip()
-                source_id = (row.get("Source ID") or "").strip()
-                company_name_raw = (row.get("Company Name") or "").strip()
-                address_raw = (row.get("Address") or "").strip()
-                phone_raw = (row.get("Phone Number") or "").strip()
+                # Extract values using the mapping
+                source_type = ""
+                source_id = ""
+                company_name_raw = ""
+                address_parts = []
+                phone_raw = ""
+                
+                # Find values by matching headers to column keys
+                for header, value in row.items():
+                    col_key = header_to_col_key.get(header)
+                    if col_key == "SOURCE_TYPE":
+                        source_type = (value or "").strip()
+                    elif col_key == "SOURCE_ID":
+                        source_id = (value or "").strip()
+                    elif col_key == "COMPANY_NAME":
+                        company_name_raw = (value or "").strip()
+                    elif col_key and col_key.startswith("ADDRESS"):
+                        # Collect all address fields
+                        val = (value or "").strip()
+                        if val:
+                            address_parts.append(val)
+                    elif col_key == "PHONE_NUMBER":
+                        phone_raw = (value or "").strip()
+                
+                # Combine address parts
+                address_raw = ", ".join(address_parts) if address_parts else ""
 
                 company_name = normalize_company_name(company_name_raw)
                 address = normalize_address(address_raw)

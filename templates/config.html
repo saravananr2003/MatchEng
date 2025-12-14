@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Column Configuration - MatchEng</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+    <link rel="stylesheet" href="/static/config.css" />
+  </head>
+  <body>
+    <main class="container">
+      <div class="header-nav">
+        <h1>Column Configuration</h1>
+        <nav>
+          <a href="/" class="nav-link">Upload CSV</a>
+          <a href="/config" class="nav-link active">Configure Columns</a>
+        </nav>
+      </div>
+      <p class="muted">
+        Manage input columns for CSV uploads. Add, edit, or inactivate columns as needed.
+      </p>
+
+      <div id="status" class="status" hidden></div>
+
+      <section class="card">
+        <div class="section-header">
+          <h2>Input Columns</h2>
+          <button id="addColumnBtn" class="btn-primary">+ Add Column</button>
+        </div>
+
+        <div id="columnsContainer">
+          <div class="loading">Loading columns...</div>
+        </div>
+      </section>
+
+      <!-- Add/Edit Column Modal -->
+      <div id="columnModal" class="modal" hidden>
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3 id="modalTitle">Add Column</h3>
+            <button class="modal-close" id="closeModal">&times;</button>
+          </div>
+          <form id="columnForm">
+            <input type="hidden" id="columnKey" name="columnKey" />
+            
+            <div class="form-group">
+              <label for="columnLabel">Column Label *</label>
+              <input type="text" id="columnLabel" name="label" required 
+                     placeholder="e.g., Company Name" />
+              <small>The display name for this column in CSV files</small>
+            </div>
+
+            <div class="form-group">
+              <label for="fieldType">Field Type *</label>
+              <select id="fieldType" name="field_type" required>
+                <option value="Base Fields">Base Fields</option>
+                <option value="Source Fields">Source Fields</option>
+                <option value="Address Fields">Address Fields</option>
+                <option value="Phone Fields">Phone Fields</option>
+                <option value="Additional Fields">Additional Fields</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="columnDescription">Description</label>
+              <textarea id="columnDescription" name="description" rows="3"
+                        placeholder="Describe what this column represents"></textarea>
+            </div>
+
+            <div class="form-group">
+              <label for="columnType">Data Type *</label>
+              <select id="columnType" name="type" required>
+                <option value="string">String</option>
+                <option value="number">Number</option>
+                <option value="boolean">Boolean</option>
+                <option value="date">Date</option>
+              </select>
+            </div>
+
+            <div class="form-group checkbox-group">
+              <label>
+                <input type="checkbox" id="columnRequired" name="required" />
+                Required
+              </label>
+              <small>This column must be present in uploaded CSV files</small>
+            </div>
+
+            <div class="form-group checkbox-group">
+              <label>
+                <input type="checkbox" id="columnActive" name="active" checked />
+                Active
+              </label>
+              <small>Inactive columns are ignored during validation</small>
+            </div>
+
+            <div class="form-group">
+              <label for="alternateNames">Alternate Names</label>
+              <textarea id="alternateNames" name="alternate_names" rows="3"
+                        placeholder="Enter alternate names, one per line (e.g., COMP_NAME, COMP_NM)"></textarea>
+              <small>CSV headers matching these names will be recognized as this column</small>
+            </div>
+
+            <div class="form-actions">
+              <button type="button" class="btn-secondary" id="cancelBtn">Cancel</button>
+              <button type="submit" class="btn-primary">Save Column</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </main>
+
+    <script src="/static/config.js"></script>
+  </body>
+</html>
+
