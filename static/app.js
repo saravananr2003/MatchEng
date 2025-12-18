@@ -1,5 +1,21 @@
 // Global utilities
 
+// Theme management
+function setTheme(theme) {
+  localStorage.setItem('theme', theme);
+  document.documentElement.setAttribute('data-theme', theme);
+  const switcher = document.getElementById('themeSwitcher');
+  if (switcher) switcher.value = theme;
+}
+
+function initTheme() {
+  const saved = localStorage.getItem('theme') || 'auto';
+  const switcher = document.getElementById('themeSwitcher');
+  if (switcher) switcher.value = saved;
+}
+
+document.addEventListener('DOMContentLoaded', initTheme);
+
 function showToast(message, type = 'info') {
   const toast = document.getElementById('toast');
   toast.textContent = message;
