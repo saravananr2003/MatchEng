@@ -48,9 +48,8 @@ function renderRules() {
             <span class="badge ${isEnabled ? 'enabled' : 'disabled'}">${isEnabled ? 'Enabled' : 'Disabled'}</span>
           </div>
           <div class="rule-actions">
-            <button type="button" class="btn-secondary btn-small" onclick="toggleRule('${ruleId}')">${isEnabled ? 'Disable' : 'Enable'}</button>
-            <button type="button" class="btn-primary btn-small" onclick="editRule('${ruleId}')">Edit</button>
-            <button type="button" class="btn-danger btn-small" onclick="deleteRule('${ruleId}')">Delete</button>
+<button type="button" class="btn-primary btn-small" onclick="editRule('${ruleId}')">Edit</button>
+                   <button type="button" class="btn-secondary btn-small" onclick="toggleRule('${ruleId}')">${isEnabled ? 'Disable' : 'Enable'}</button>
           </div>
         </div>
         
