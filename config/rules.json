@@ -1,84 +1,93 @@
 {
     "rules": {
-      "BR001": {
-        "name": "Company + Address",
-        "description": "Match on: company_name, address",
-        "enabled": true,
-        "priority": 100,
-        "match_reason": "CMP_ADDR",
-        "conditions": [
-          {
-            "field": "COMPANY_NAME",
-            "percentage": "70",
-            "include": true,
-            "blank": false,
-            "blank_allowed": false
-          },
-          {
-            "field": "ADDRESS_LINE_1",
-            "percentage": "80",
-            "include": true,
-            "blank": false,
-            "blank_allowed": false
-          },
-          {
-            "field": "ADDRESS_LINE_2",
-            "percentage": "80",
-            "include": true,
-            "blank": false,
-            "blank_allowed": true
-          },
-          {
-            "field": "ZIP_CODE",
-            "percentage": "100",
-            "include": true,
-            "blank": false,
-            "blank_allowed": false
-          }
-        ],
-        "conditions_display": "Company Name >= 70% AND Address >= 80%",
-        "example": "Matches when: Company Name >= 70% AND Address >= 80%",
-        "custom": true,
-        "id": "BR001"
-      },
-      "BR002": {
-        "enabled": true,
-        "name": "Company Name + Phone + BlankAddress",
-        "description": "Match when company name AND phone match (with address not available)",
-        "requires_company": true,
-        "match_reason": "CMP_PHN_BLNK_ADDR",
-        "conditions": [
-          {
-            "field": "COMPANY_NAME",
-            "percentage": "60",
-            "include": true,
-            "blank": false,
-            "blank_allowed": false
-          },
-          {
-            "field": "PHONE_NUMBER",
-            "percentage": "100",
-            "include": true,
-            "blank": false,
-            "blank_allowed": false
-          },
-          {
-            "field": "ADDRESS_LINE_1",
-            "percentage": "",
-            "include": true,
-            "blank": true,
-            "blank_allowed": false
-          },
-          {
-            "field": "ZIP_CODE",
-            "percentage": "",
-            "include": true,
-            "blank": true,
-            "blank_allowed": false
-          }
-        ],
-        "priority": 200,
-        "id": "BR002"
-      }
+        "BR001": {
+            "name": "Company + Address",
+            "description": "Match on: company_name, address",
+            "enabled": true,
+            "priority": 100,
+            "match_reason": "CMP_ADDR",
+            "conditions": [
+                {
+                    "field": "COMPANY_NAME",
+                    "percentage": "70",
+                    "include": true,
+                    "blank": false,
+                    "blank_allowed": false
+                },
+                {
+                    "field": "ADDRESS_LINE_1",
+                    "percentage": "80",
+                    "include": true,
+                    "blank": false,
+                    "blank_allowed": false
+                },
+                {
+                    "field": "ADDRESS_LINE_2",
+                    "percentage": "80",
+                    "include": true,
+                    "blank": false,
+                    "blank_allowed": true
+                },
+                {
+                    "field": "ZIP_CODE",
+                    "percentage": "100",
+                    "include": true,
+                    "blank": false,
+                    "blank_allowed": false
+                }
+            ],
+            "conditions_display": "Company Name >= 70% AND Address >= 80%",
+            "example": "Matches when: Company Name >= 70% AND Address >= 80%",
+            "custom": true,
+            "id": "BR001"
+        },
+        "BR002": {
+            "enabled": true,
+            "name": "Company Name + Phone + BlankAddress",
+            "description": "Match when company name AND phone match (with address not available)",
+            "requires_company": true,
+            "match_reason": "CMP_PHN_BLNK_ADDR",
+            "conditions": [
+                {
+                    "field": "COMPANY_NAME",
+                    "percentage": "60",
+                    "include": true,
+                    "blank": false,
+                    "blank_allowed": false
+                },
+                {
+                    "field": "PHONE_NUMBER",
+                    "percentage": "100",
+                    "include": true,
+                    "blank": false,
+                    "blank_allowed": false
+                },
+                {
+                    "field": "ADDRESS_LINE_1",
+                    "percentage": "",
+                    "include": true,
+                    "blank": true,
+                    "blank_allowed": false
+                },
+                {
+                    "field": "ZIP_CODE",
+                    "percentage": "",
+                    "include": true,
+                    "blank": true,
+                    "blank_allowed": false
+                }
+            ],
+            "priority": 200,
+            "id": "BR002"
+        },
+        "BR003": {
+            "id": "BR003",
+            "name": "s",
+            "description": "s",
+            "priority": 100,
+            "match_reason": "s",
+            "enabled": true,
+            "conditions": []
+        }
     }
-  }
+}
