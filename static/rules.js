@@ -9,10 +9,17 @@ const AVAILABLE_FIELDS = [
 document.addEventListener('DOMContentLoaded', loadRules);
 
 async function loadRules() {
+  const container = document.getElementById('rules-container');
+  container.innerHTML = '<div class="loading">Loading rules...</div>';
+  
   try {
-    rulesData = await fetchJSON('/api/rules');
+    const response = await fetch('/api/rules');
+    if (!response.ok) throw new Error('Failed to fetch rules');
+    rulesData = await response.json();
     renderRules();
   } catch (error) {
+    console.error('Error loading rules:', error);
+    container.innerHTML = '<p class="muted">Failed to load rules. Please refresh the page.</p>';
     showToast('Failed to load rules', 'error');
   }
 }
@@ -22,7 +29,7 @@ function renderRules() {
   const rules = rulesData?.rules || {};
   
   if (Object.keys(rules).length === 0) {
-    container.innerHTML = '<div class="card"><p class="muted">No rules configured. Click "Add Rule" to create one.</p></div>';
+    container.innerHTML = '<p class="muted" style="padding: 20px;">No rules configured. Click "+ Add Rule" to create one.</p>';
     return;
   }
   
@@ -37,7 +44,7 @@ function renderRules() {
       <div class="rule-item ${!isEnabled ? 'disabled' : ''}">
         <div class="rule-header">
           <div class="rule-title">
-            <h3>${escapeHtml(rule.name || ruleId)}</h3>
+            <h3>${escapeHtmlLocal(rule.name || ruleId)}</h3>
             <span class="badge ${isEnabled ? 'enabled' : 'disabled'}">${isEnabled ? 'Enabled' : 'Disabled'}</span>
           </div>
           <div class="rule-actions">
@@ -48,15 +55,15 @@ function renderRules() {
         </div>
         
         <div class="rule-meta">
-          <span><strong>ID:</strong> ${escapeHtml(ruleId)}</span>
+          <span><strong>ID:</strong> ${escapeHtmlLocal(ruleId)}</span>
           <span><strong>Priority:</strong> ${rule.priority || 'N/A'}</span>
-          <span><strong>Match Reason:</strong> ${escapeHtml(rule.match_reason || 'N/A')}</span>
+          <span><strong>Match Reason:</strong> ${escapeHtmlLocal(rule.match_reason || 'N/A')}</span>
         </div>
         
-        ${rule.description ? `<p style="margin-bottom: 12px; color: var(--text-secondary);">${escapeHtml(rule.description)}</p>` : ''}
+        ${rule.description ? `<p style="margin-bottom: 12px; color: var(--text-secondary); font-size: 13px;">${escapeHtmlLocal(rule.description)}</p>` : ''}
         
         <div class="rule-conditions">
-          <strong>Conditions:</strong>
+          <strong style="display: block; margin-bottom: 8px;">Conditions:</strong>
           ${renderConditionsSummary(rule.conditions || [])}
         </div>
       </div>
@@ -66,8 +73,15 @@ function renderRules() {
   container.innerHTML = html;
 }
 
+function escapeHtmlLocal(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = String(text);
+  return div.innerHTML;
+}
+
 function renderConditionsSummary(conditions) {
-  if (!conditions.length) return '<p class="muted">No conditions defined</p>';
+  if (!conditions || !conditions.length) return '<p class="muted">No conditions defined</p>';
   
   let html = '';
   for (const cond of conditions) {
@@ -83,9 +97,9 @@ function renderConditionsSummary(conditions) {
     }
     
     html += `<div class="condition-item">
-      <span style="font-weight: 500;">${escapeHtml(field)}</span>
+      <span style="font-weight: 500; min-width: 140px;">${escapeHtmlLocal(field)}</span>
       <span style="color: var(--text-muted);">${desc}</span>
-      ${cond.blank_allowed ? '<span class="badge" style="font-size: 10px;">blank ok</span>' : ''}
+      ${cond.blank_allowed ? '<span class="badge" style="font-size: 10px; margin-left: 8px;">blank ok</span>' : ''}
     </div>`;
   }
   
@@ -112,10 +126,15 @@ function openRuleModal(ruleId = null) {
     document.getElementById('ruleEnabled').checked = rule.enabled !== false;
     
     // Load conditions
-    (rule.conditions || []).forEach(cond => addCondition(cond));
+    if (rule.conditions && rule.conditions.length > 0) {
+      rule.conditions.forEach(cond => addCondition(cond));
+    } else {
+      addCondition();
+    }
   } else {
     title.textContent = 'Add Rule';
     document.getElementById('ruleId').value = '';
+    document.getElementById('ruleEnabled').checked = true;
     addCondition(); // Add empty condition
   }
   
@@ -135,46 +154,50 @@ function addCondition(existingCond = null) {
     `<option value="${f}" ${existingCond?.field === f ? 'selected' : ''}>${f}</option>`
   ).join('');
   
-  const html = `
-    <div class="condition-row" data-index="${index}">
-      <select name="cond_field_${index}" required>
-        <option value="">Select Field</option>
-        ${fieldOptions}
-      </select>
-      <input type="number" name="cond_pct_${index}" placeholder="%" min="0" max="100" 
-             value="${existingCond?.percentage || ''}" ${existingCond?.blank ? 'disabled' : ''} />
-      <label style="display: flex; align-items: center; gap: 4px;">
-        <input type="checkbox" name="cond_blank_${index}" 
-               ${existingCond?.blank ? 'checked' : ''} 
-               onchange="toggleBlankCondition(${index})" />
-        Blank
-      </label>
-      <label style="display: flex; align-items: center; gap: 4px;">
-        <input type="checkbox" name="cond_blankallowed_${index}" 
-               ${existingCond?.blank_allowed ? 'checked' : ''} />
-        Allow Blank
-      </label>
-      <button type="button" class="remove-btn" onclick="removeCondition(${index})">×</button>
-    </div>
+  const div = document.createElement('div');
+  div.className = 'condition-row';
+  div.dataset.index = index;
+  
+  div.innerHTML = `
+    <select name="cond_field_${index}" required>
+      <option value="">Select Field</option>
+      ${fieldOptions}
+    </select>
+    <input type="number" name="cond_pct_${index}" placeholder="%" min="0" max="100" 
+           value="${existingCond?.percentage || ''}" ${existingCond?.blank ? 'disabled' : ''} />
+    <label style="display: flex; align-items: center; gap: 4px; font-size: 12px;">
+      <input type="checkbox" name="cond_blank_${index}" 
+             ${existingCond?.blank ? 'checked' : ''} 
+             onchange="toggleBlankCondition(${index})" />
+      Blank
+    </label>
+    <label style="display: flex; align-items: center; gap: 4px; font-size: 12px;">
+      <input type="checkbox" name="cond_blankallowed_${index}" 
+             ${existingCond?.blank_allowed ? 'checked' : ''} />
+      Allow Blank
+    </label>
+    <button type="button" class="remove-btn" onclick="removeCondition(this)">×</button>
   `;
   
-  container.insertAdjacentHTML('beforeend', html);
+  container.appendChild(div);
 }
 
 function toggleBlankCondition(index) {
   const blankCheck = document.querySelector(`[name="cond_blank_${index}"]`);
   const pctInput = document.querySelector(`[name="cond_pct_${index}"]`);
   
-  if (blankCheck.checked) {
-    pctInput.disabled = true;
-    pctInput.value = '';
-  } else {
-    pctInput.disabled = false;
+  if (blankCheck && pctInput) {
+    if (blankCheck.checked) {
+      pctInput.disabled = true;
+      pctInput.value = '';
+    } else {
+      pctInput.disabled = false;
+    }
   }
 }
 
-function removeCondition(index) {
-  const row = document.querySelector(`.condition-row[data-index="${index}"]`);
+function removeCondition(btn) {
+  const row = btn.closest('.condition-row');
   if (row) row.remove();
 }
 
@@ -182,7 +205,7 @@ async function saveRule(event) {
   event.preventDefault();
   
   const form = document.getElementById('ruleForm');
-  let ruleId = document.getElementById('ruleId').value;
+  let ruleId = document.getElementById('ruleId').value.trim();
   
   if (!ruleId) {
     // Generate new ID
@@ -196,36 +219,47 @@ async function saveRule(event) {
   const conditions = [];
   const conditionRows = document.querySelectorAll('.condition-row');
   
-  conditionRows.forEach((row, i) => {
+  conditionRows.forEach((row) => {
     const idx = row.dataset.index;
     const field = form.querySelector(`[name="cond_field_${idx}"]`)?.value;
     const pct = form.querySelector(`[name="cond_pct_${idx}"]`)?.value;
-    const blank = form.querySelector(`[name="cond_blank_${idx}"]`)?.checked;
-    const blankAllowed = form.querySelector(`[name="cond_blankallowed_${idx}"]`)?.checked;
+    const blank = form.querySelector(`[name="cond_blank_${idx}"]`)?.checked || false;
+    const blankAllowed = form.querySelector(`[name="cond_blankallowed_${idx}"]`)?.checked || false;
     
     if (field) {
       conditions.push({
         field,
         percentage: pct || '',
         include: true,
-        blank: blank || false,
-        blank_allowed: blankAllowed || false
+        blank: blank,
+        blank_allowed: blankAllowed
       });
     }
   });
   
   const ruleData = {
     id: ruleId,
-    name: document.getElementById('ruleName').value,
-    description: document.getElementById('ruleDescription').value,
+    name: document.getElementById('ruleName').value.trim(),
+    description: document.getElementById('ruleDescription').value.trim(),
     priority: parseInt(document.getElementById('rulePriority').value) || 100,
-    match_reason: document.getElementById('ruleMatchReason').value,
+    match_reason: document.getElementById('ruleMatchReason').value.trim(),
     enabled: document.getElementById('ruleEnabled').checked,
     conditions
   };
   
+  if (!ruleData.name) {
+    showToast('Rule name is required', 'error');
+    return;
+  }
+  
   try {
-    const result = await putJSON(`/api/rules/${ruleId}`, ruleData);
+    const response = await fetch(`/api/rules/${ruleId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(ruleData)
+    });
+    
+    const result = await response.json();
     
     if (result.ok) {
       showToast('Rule saved successfully', 'success');
@@ -235,6 +269,7 @@ async function saveRule(event) {
       showToast(result.error || 'Failed to save rule', 'error');
     }
   } catch (error) {
+    console.error('Error saving rule:', error);
     showToast('Failed to save rule', 'error');
   }
 }
@@ -245,7 +280,12 @@ function editRule(ruleId) {
 
 async function toggleRule(ruleId) {
   try {
-    const result = await patchJSON(`/api/rules/${ruleId}/toggle`);
+    const response = await fetch(`/api/rules/${ruleId}/toggle`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    const result = await response.json();
     
     if (result.ok) {
       showToast(result.message, 'success');
@@ -254,6 +294,7 @@ async function toggleRule(ruleId) {
       showToast(result.error || 'Failed to toggle rule', 'error');
     }
   } catch (error) {
+    console.error('Error toggling rule:', error);
     showToast('Failed to toggle rule', 'error');
   }
 }
@@ -262,7 +303,12 @@ async function deleteRule(ruleId) {
   if (!confirm(`Are you sure you want to delete rule "${ruleId}"?`)) return;
   
   try {
-    const result = await deleteJSON(`/api/rules/${ruleId}`);
+    const response = await fetch(`/api/rules/${ruleId}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    const result = await response.json();
     
     if (result.ok) {
       showToast('Rule deleted', 'success');
@@ -271,7 +317,7 @@ async function deleteRule(ruleId) {
       showToast(result.error || 'Failed to delete rule', 'error');
     }
   } catch (error) {
+    console.error('Error deleting rule:', error);
     showToast('Failed to delete rule', 'error');
   }
 }
-
