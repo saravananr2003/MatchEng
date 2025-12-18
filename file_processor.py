@@ -81,10 +81,18 @@ def calculate_analytics(rows: List[Dict], headers: List[str], columns_metadata: 
     for col in headers:
         non_empty = sum(1 for row in rows if row.get(col) and str(row.get(col)).strip())
         completeness = round((non_empty / total_rows) * 100, 2) if total_rows > 0 else 0
+        
+        # Get metadata for this column
+        col_meta = columns_metadata.get(col, {})
+        display_label = col_meta.get("display_label", col)
+        description = col_meta.get("description", "")
+        
         analytics["column_completeness"][col] = {
             "filled": non_empty,
             "empty": total_rows - non_empty,
-            "completeness_pct": completeness
+            "completeness_pct": completeness,
+            "display_label": display_label,
+            "description": description
         }
     
     # Field-specific analytics

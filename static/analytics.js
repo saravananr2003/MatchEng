@@ -203,7 +203,7 @@ function renderAnalytics(analytics, container) {
           <div class="field-stat-card">
             <h4>${formatFieldName(field)}</h4>
             <div class="distribution-chart">
-              ${Object.entries(data.top_values).slice(0, 5).map(([value, count]) => `
+              ${Object.entries(data.top_values).slice(0, 10).map(([value, count]) => `
                 <div class="distribution-item">
                   <span class="distribution-label" title="${escapeHtml(value)}">${escapeHtml(value) || '(empty)'}</span>
                   <div class="distribution-bar-container">
@@ -240,9 +240,16 @@ function renderAnalytics(analytics, container) {
         <tbody>
           ${Object.entries(column_completeness)
             .sort((a, b) => b[1].completeness_pct - a[1].completeness_pct)
-            .map(([col, data]) => `
+            .map(([col, data]) => {
+              const displayLabel = data.display_label || col;
+              const description = data.description || '';
+              const tooltip = description ? `${col}: ${description}` : col;
+              return `
               <tr>
-                <td><code>${escapeHtml(col)}</code></td>
+                <td title="${escapeHtml(tooltip)}" style="cursor: help;">
+                  <strong>${escapeHtml(displayLabel)}</strong>
+                  <br><code style="font-size: 0.75rem; color: var(--text-muted);">${escapeHtml(col)}</code>
+                </td>
                 <td>${data.filled.toLocaleString()}</td>
                 <td>${data.empty.toLocaleString()}</td>
                 <td>
@@ -252,7 +259,7 @@ function renderAnalytics(analytics, container) {
                   </div>
                 </td>
               </tr>
-            `).join('')}
+            `;}).join('')}
         </tbody>
       </table>
     </div>

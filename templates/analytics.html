@@ -208,16 +208,19 @@
 
 .distribution-bar-container {
   flex: 1;
+  min-width: 100px;
   height: 20px;
-  background: var(--border);
+  background: var(--border, #e5e7eb);
   border-radius: 4px;
   overflow: hidden;
 }
 
 .distribution-bar {
   height: 100%;
-  background: var(--primary);
+  min-width: 4px;
+  background: linear-gradient(90deg, #3b82f6, #6366f1);
   border-radius: 4px;
+  transition: width 0.3s ease;
 }
 
 .distribution-count {
