@@ -737,3 +737,253 @@ body {
   font-size: 13px;
 }
 
+/* Upload Zone */
+.upload-zone {
+  border: 2px dashed var(--border-light);
+  border-radius: 12px;
+  padding: 48px;
+  text-align: center;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.upload-zone:hover,
+.upload-zone.dragover {
+  border-color: var(--accent);
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.upload-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+/* File List */
+.file-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+.file-info {
+  flex: 1;
+}
+
+.file-name {
+  font-weight: 500;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.file-meta {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.file-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.file-summary {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.file-summary-item {
+  padding: 8px 0;
+}
+
+/* Data Table */
+.table-container {
+  overflow-x: auto;
+  margin-top: 16px;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.data-table th,
+.data-table td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.data-table th {
+  background: var(--bg-secondary);
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+}
+
+.data-table tr:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* Mapping Grid */
+.mapping-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mapping-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto;
+  gap: 16px;
+  align-items: center;
+  padding: 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.source-column label,
+.target-column label {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.source-name {
+  font-weight: 500;
+  font-family: monospace;
+}
+
+.arrow {
+  color: var(--text-muted);
+  font-size: 18px;
+}
+
+.target-column select {
+  width: 100%;
+  padding: 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  color: var(--text-primary);
+}
+
+.confidence {
+  min-width: 60px;
+}
+
+/* Columns Selector */
+.columns-selector {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.column-group {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.column-group-header {
+  padding: 12px 16px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+}
+
+.column-group-header label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.column-group-items {
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.column-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.column-checkbox input {
+  cursor: pointer;
+}
+
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-item {
+  text-align: center;
+  padding: 20px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.stat-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* Progress Bar */
+.progress-bar {
+  height: 8px;
+  background: var(--bg-input);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 4px;
+  width: 0%;
+  transition: width 0.3s;
+  animation: progress-pulse 1.5s infinite;
+}
+
+@keyframes progress-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* Large Button */
+.btn-large {
+  width: 100%;
+  padding: 16px 24px;
+  font-size: 16px;
+}
+

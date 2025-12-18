@@ -1,10 +1,13 @@
+import csv
 import json
 import os
+import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, send_file, session
+from werkzeug.utils import secure_filename
 
 
 def load_json_config(file_path: str) -> Dict[str, Any]:
@@ -29,16 +32,25 @@ def save_json_config(file_path: str, data: Dict[str, Any]) -> bool:
 
 def create_app() -> Flask:
     app = Flask(__name__)
+    app.secret_key = os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")
     
     # Configuration paths
-    config_dir = Path(__file__).parent / "config"
+    base_dir = Path(__file__).parent
+    config_dir = base_dir / "config"
     app.config["SETTINGS_PATH"] = str(config_dir / "settings.json")
     app.config["RULES_PATH"] = str(config_dir / "rules.json")
     app.config["COLUMNS_METADATA_PATH"] = str(config_dir / "columns_metadata.json")
     app.config["COLUMN_CONFIG_PATH"] = str(config_dir / "column_config.json")
     
-    # Ensure config directory exists
+    # File paths
+    app.config["UPLOAD_FOLDER"] = str(base_dir / "datafiles" / "incoming")
+    app.config["OUTPUT_FOLDER"] = str(base_dir / "datafiles" / "output")
+    app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50MB
+    
+    # Ensure directories exist
     config_dir.mkdir(parents=True, exist_ok=True)
+    Path(app.config["UPLOAD_FOLDER"]).mkdir(parents=True, exist_ok=True)
+    Path(app.config["OUTPUT_FOLDER"]).mkdir(parents=True, exist_ok=True)
 
     # ==================== Pages ====================
     
@@ -57,6 +69,252 @@ def create_app() -> Flask:
     @app.get("/columns")
     def columns_page():
         return render_template("columns.html")
+    
+    @app.get("/upload")
+    def upload_page():
+        return render_template("upload.html")
+    
+    @app.get("/map_fields")
+    def map_fields_page():
+        return render_template("map_fields.html")
+    
+    @app.get("/process")
+    def process_page():
+        return render_template("process.html")
+    
+    @app.get("/results")
+    def results_page():
+        return render_template("results.html")
+
+    # ==================== File Upload API ====================
+    
+    @app.post("/api/upload")
+    def upload_file():
+        """Handle file upload."""
+        if "file" not in request.files:
+            return jsonify({"error": "No file provided"}), 400
+        
+        file = request.files["file"]
+        if not file or not file.filename:
+            return jsonify({"error": "No file selected"}), 400
+        
+        filename = secure_filename(file.filename)
+        if not filename.lower().endswith('.csv'):
+            return jsonify({"error": "Only CSV files are supported"}), 400
+        
+        # Generate unique filename
+        file_id = str(uuid.uuid4())[:8]
+        stored_filename = f"{file_id}_{filename}"
+        file_path = Path(app.config["UPLOAD_FOLDER"]) / stored_filename
+        
+        try:
+            file.save(str(file_path))
+            
+            # Read preview
+            preview_rows = []
+            headers = []
+            with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+                reader = csv.DictReader(f)
+                headers = reader.fieldnames or []
+                for i, row in enumerate(reader):
+                    if i >= 10:  # Preview first 10 rows
+                        break
+                    preview_rows.append(dict(row))
+            
+            # Count total rows
+            with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+                total_rows = sum(1 for _ in f) - 1  # Subtract header
+            
+            # Store in session
+            session['current_file'] = stored_filename
+            session['file_headers'] = headers
+            
+            return jsonify({
+                "ok": True,
+                "file_id": file_id,
+                "filename": filename,
+                "stored_filename": stored_filename,
+                "headers": headers,
+                "preview": preview_rows,
+                "total_rows": total_rows
+            })
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+    
+    @app.get("/api/files")
+    def list_files():
+        """List uploaded files."""
+        upload_dir = Path(app.config["UPLOAD_FOLDER"])
+        files = []
+        
+        for f in upload_dir.glob("*.csv"):
+            stat = f.stat()
+            files.append({
+                "filename": f.name,
+                "size": stat.st_size,
+                "modified": datetime.fromtimestamp(stat.st_mtime).isoformat()
+            })
+        
+        return jsonify(sorted(files, key=lambda x: x['modified'], reverse=True))
+    
+    @app.delete("/api/files/<filename>")
+    def delete_file(filename: str):
+        """Delete an uploaded file."""
+        file_path = Path(app.config["UPLOAD_FOLDER"]) / secure_filename(filename)
+        
+        if file_path.exists():
+            file_path.unlink()
+            return jsonify({"ok": True, "message": "File deleted"})
+        else:
+            return jsonify({"error": "File not found"}), 404
+    
+    @app.get("/api/file-preview/<filename>")
+    def file_preview(filename: str):
+        """Get preview of a file."""
+        file_path = Path(app.config["UPLOAD_FOLDER"]) / secure_filename(filename)
+        
+        if not file_path.exists():
+            return jsonify({"error": "File not found"}), 404
+        
+        try:
+            preview_rows = []
+            headers = []
+            with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+                reader = csv.DictReader(f)
+                headers = reader.fieldnames or []
+                for i, row in enumerate(reader):
+                    if i >= 100:
+                        break
+                    preview_rows.append(dict(row))
+            
+            return jsonify({
+                "headers": headers,
+                "preview": preview_rows
+            })
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    # ==================== Field Mapping API ====================
+    
+    @app.post("/api/auto-map")
+    def auto_map_fields():
+        """Auto-map source columns to standard columns."""
+        data = request.get_json()
+        source_headers = data.get('headers', [])
+        
+        columns_metadata = load_json_config(app.config["COLUMNS_METADATA_PATH"])
+        
+        mapping = {}
+        confidence = {}
+        
+        for source_col in source_headers:
+            source_upper = source_col.upper().strip()
+            best_match = None
+            best_score = 0
+            
+            for std_col, meta in columns_metadata.items():
+                # Check exact match
+                if source_upper == std_col.upper():
+                    best_match = std_col
+                    best_score = 100
+                    break
+                
+                # Check alternate names
+                alternates = [a.upper() for a in meta.get('alternate_columns', [])]
+                if source_upper in alternates:
+                    best_match = std_col
+                    best_score = 95
+                    break
+                
+                # Check partial match
+                if std_col.upper() in source_upper or source_upper in std_col.upper():
+                    if best_score < 70:
+                        best_match = std_col
+                        best_score = 70
+            
+            if best_match and best_score >= 70:
+                mapping[source_col] = best_match
+                confidence[source_col] = best_score
+        
+        return jsonify({
+            "mapping": mapping,
+            "confidence": confidence
+        })
+
+    # ==================== Processing API ====================
+    
+    @app.post("/api/process")
+    def run_process():
+        """Run the matching process."""
+        data = request.get_json()
+        filename = data.get('filename')
+        field_mapping = data.get('field_mapping', {})
+        output_columns = data.get('output_columns', [])
+        
+        if not filename:
+            return jsonify({"error": "No file specified"}), 400
+        
+        input_path = Path(app.config["UPLOAD_FOLDER"]) / secure_filename(filename)
+        if not input_path.exists():
+            return jsonify({"error": "File not found"}), 404
+        
+        # Generate output filename
+        output_id = str(uuid.uuid4())[:8]
+        output_filename = f"matched_{output_id}.csv"
+        output_path = Path(app.config["OUTPUT_FOLDER"]) / output_filename
+        
+        try:
+            from matching_engine import run_matching
+            
+            stats = run_matching(
+                input_file=str(input_path),
+                output_file=str(output_path),
+                field_mapping=field_mapping,
+                selected_output_columns=output_columns if output_columns else None
+            )
+            
+            stats['output_filename'] = output_filename
+            stats['download_url'] = f"/download/{output_filename}"
+            
+            # Store in session
+            session['last_output'] = output_filename
+            session['last_stats'] = stats
+            
+            return jsonify({"ok": True, "stats": stats})
+        except Exception as e:
+            import traceback
+            return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+    
+    @app.get("/download/<filename>")
+    def download_file(filename: str):
+        """Download output file."""
+        file_path = Path(app.config["OUTPUT_FOLDER"]) / secure_filename(filename)
+        
+        if not file_path.exists():
+            return jsonify({"error": "File not found"}), 404
+        
+        return send_file(
+            str(file_path),
+            as_attachment=True,
+            download_name=filename
+        )
+    
+    @app.get("/api/output-files")
+    def list_output_files():
+        """List output files."""
+        output_dir = Path(app.config["OUTPUT_FOLDER"])
+        files = []
+        
+        for f in output_dir.glob("*.csv"):
+            stat = f.stat()
+            files.append({
+                "filename": f.name,
+                "size": stat.st_size,
+                "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                "download_url": f"/download/{f.name}"
+            })
+        
+        return jsonify(sorted(files, key=lambda x: x['modified'], reverse=True))
 
     # ==================== Settings API ====================
     

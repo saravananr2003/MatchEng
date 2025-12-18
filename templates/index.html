@@ -10,22 +10,40 @@
 </div>
 
 <div class="dashboard-grid">
+  <a href="/upload" class="dashboard-card">
+    <div class="card-icon">📤</div>
+    <h3>Upload File</h3>
+    <p>Upload CSV files for deduplication and matching.</p>
+  </a>
+  
+  <a href="/process" class="dashboard-card">
+    <div class="card-icon">⚡</div>
+    <h3>Process & Match</h3>
+    <p>Run the matching engine on uploaded files.</p>
+  </a>
+  
+  <a href="/results" class="dashboard-card">
+    <div class="card-icon">📥</div>
+    <h3>Results</h3>
+    <p>View and download matching results.</p>
+  </a>
+  
   <a href="/settings" class="dashboard-card">
     <div class="card-icon">⚙️</div>
     <h3>Settings</h3>
-    <p>Configure matching thresholds, scoring weights, and application settings.</p>
+    <p>Configure matching thresholds and scoring weights.</p>
   </a>
   
   <a href="/rules" class="dashboard-card">
     <div class="card-icon">📋</div>
     <h3>Matching Rules</h3>
-    <p>Define and manage business rules for record matching.</p>
+    <p>Define business rules for record matching.</p>
   </a>
   
   <a href="/columns" class="dashboard-card">
     <div class="card-icon">📊</div>
     <h3>Column Metadata</h3>
-    <p>Configure input/output columns, alternate names, and field properties.</p>
+    <p>Configure columns and alternate names.</p>
   </a>
 </div>
 {% endblock %}
