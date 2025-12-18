@@ -45,12 +45,14 @@ def create_app() -> Flask:
     # File paths
     app.config["UPLOAD_FOLDER"] = str(base_dir / "datafiles" / "incoming")
     app.config["OUTPUT_FOLDER"] = str(base_dir / "datafiles" / "output")
+    app.config["PROCESS_FOLDER"] = str(base_dir / "datafiles" / "process")
     app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50MB
     
     # Ensure directories exist
     config_dir.mkdir(parents=True, exist_ok=True)
     Path(app.config["UPLOAD_FOLDER"]).mkdir(parents=True, exist_ok=True)
     Path(app.config["OUTPUT_FOLDER"]).mkdir(parents=True, exist_ok=True)
+    Path(app.config["PROCESS_FOLDER"]).mkdir(parents=True, exist_ok=True)
 
     # ==================== Pages ====================
     
@@ -85,6 +87,10 @@ def create_app() -> Flask:
     @app.get("/results")
     def results_page():
         return render_template("results.html")
+    
+    @app.get("/analytics")
+    def analytics_page():
+        return render_template("analytics.html")
 
     # ==================== File Upload API ====================
     
@@ -195,6 +201,114 @@ def create_app() -> Flask:
             })
         except Exception as e:
             return jsonify({"error": str(e)}), 500
+
+    # ==================== File Processing API ====================
+    
+    @app.post("/api/process-file")
+    def process_uploaded_file():
+        """Process an uploaded file: standardize columns and generate analytics."""
+        data = request.get_json()
+        filename = data.get('filename')
+        
+        if not filename:
+            return jsonify({"error": "No file specified"}), 400
+        
+        input_path = Path(app.config["UPLOAD_FOLDER"]) / secure_filename(filename)
+        if not input_path.exists():
+            return jsonify({"error": "File not found"}), 404
+        
+        try:
+            from file_processor import process_file
+            
+            result = process_file(
+                input_path=str(input_path),
+                output_dir=app.config["PROCESS_FOLDER"],
+                columns_metadata_path=app.config["COLUMNS_METADATA_PATH"]
+            )
+            
+            if "error" in result:
+                return jsonify(result), 500
+            
+            # Store in session
+            session['processed_file'] = result.get('processed_filename')
+            session['analytics_file'] = result.get('analytics_filename')
+            
+            return jsonify(result)
+        except Exception as e:
+            import traceback
+            return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+    
+    @app.get("/api/processed-files")
+    def list_processed_files():
+        """List processed files."""
+        process_dir = Path(app.config["PROCESS_FOLDER"])
+        files = []
+        
+        for f in process_dir.glob("*_processed.csv"):
+            stat = f.stat()
+            # Check for corresponding analytics file
+            analytics_name = f.name.replace("_processed.csv", "_analytics.json")
+            analytics_path = process_dir / analytics_name
+            
+            files.append({
+                "filename": f.name,
+                "size": stat.st_size,
+                "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                "has_analytics": analytics_path.exists(),
+                "analytics_filename": analytics_name if analytics_path.exists() else None
+            })
+        
+        return jsonify(sorted(files, key=lambda x: x['modified'], reverse=True))
+    
+    @app.get("/api/processed-file-preview/<filename>")
+    def processed_file_preview(filename: str):
+        """Get preview of a processed file."""
+        from file_processor import get_processed_file_preview
+        
+        result = get_processed_file_preview(
+            processed_filename=secure_filename(filename),
+            process_dir=app.config["PROCESS_FOLDER"]
+        )
+        
+        if "error" in result:
+            return jsonify(result), 404
+        
+        return jsonify(result)
+    
+    @app.get("/api/analytics/<filename>")
+    def get_analytics(filename: str):
+        """Get analytics for a processed file."""
+        from file_processor import load_analytics
+        
+        result = load_analytics(
+            analytics_filename=secure_filename(filename),
+            process_dir=app.config["PROCESS_FOLDER"]
+        )
+        
+        if "error" in result:
+            return jsonify(result), 404
+        
+        return jsonify(result)
+    
+    @app.delete("/api/processed-files/<filename>")
+    def delete_processed_file(filename: str):
+        """Delete a processed file and its analytics."""
+        process_dir = Path(app.config["PROCESS_FOLDER"])
+        file_path = process_dir / secure_filename(filename)
+        
+        if not file_path.exists():
+            return jsonify({"error": "File not found"}), 404
+        
+        # Delete the processed file
+        file_path.unlink()
+        
+        # Delete corresponding analytics file if exists
+        analytics_name = filename.replace("_processed.csv", "_analytics.json")
+        analytics_path = process_dir / analytics_name
+        if analytics_path.exists():
+            analytics_path.unlink()
+        
+        return jsonify({"ok": True, "message": "File deleted"})
 
     # ==================== Field Mapping API ====================
     

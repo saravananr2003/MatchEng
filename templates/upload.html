@@ -26,6 +26,7 @@
     <h2>File Preview</h2>
     <div>
       <span id="fileInfo" class="muted"></span>
+      <button class="btn-secondary" onclick="processAndAnalyze()" id="processBtn">Process & Analyze</button>
       <button class="btn-primary" onclick="proceedToMapping()">Continue to Mapping →</button>
     </div>
   </div>
@@ -223,6 +224,41 @@ function formatSize(bytes) {
 
 function formatDate(isoString) {
   return new Date(isoString).toLocaleString();
+}
+
+async function processAndAnalyze() {
+  if (!currentFile) {
+    showToast('No file selected', 'error');
+    return;
+  }
+  
+  const btn = document.getElementById('processBtn');
+  btn.disabled = true;
+  btn.textContent = 'Processing...';
+  
+  try {
+    const response = await fetch('/api/process-file', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename: currentFile.stored_filename || currentFile.filename })
+    });
+    
+    const data = await response.json();
+    
+    if (data.ok) {
+      showToast('File processed successfully!', 'success');
+      // Redirect to analytics page
+      window.location.href = '/analytics';
+    } else {
+      showToast(data.error || 'Processing failed', 'error');
+      btn.disabled = false;
+      btn.textContent = 'Process & Analyze';
+    }
+  } catch (error) {
+    showToast('Processing failed: ' + error.message, 'error');
+    btn.disabled = false;
+    btn.textContent = 'Process & Analyze';
+  }
 }
 </script>
 {% endblock %}
