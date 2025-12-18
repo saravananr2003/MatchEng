@@ -29,7 +29,7 @@ function renderRules() {
   const rules = rulesData?.rules || {};
   
   if (Object.keys(rules).length === 0) {
-    container.innerHTML = '<p class="muted" style="padding: 20px;">No rules configured. Click "+ Add Rule" to create one.</p>';
+    container.innerHTML = '<div class="card"><p class="muted" style="padding: 20px;">No rules configured. Click "+ Add Rule" to create one.</p></div>';
     return;
   }
   
@@ -41,16 +41,16 @@ function renderRules() {
     const isEnabled = rule.enabled !== false;
     
     html += `
-      <div class="rule-item ${!isEnabled ? 'disabled' : ''}">
+      <div class="rule-item ${!isEnabled ? 'disabled' : ''}" data-rule-id="${ruleId}">
         <div class="rule-header">
           <div class="rule-title">
             <h3>${escapeHtmlLocal(rule.name || ruleId)}</h3>
             <span class="badge ${isEnabled ? 'enabled' : 'disabled'}">${isEnabled ? 'Enabled' : 'Disabled'}</span>
           </div>
           <div class="rule-actions">
-            <button class="btn-secondary btn-small" onclick="toggleRule('${ruleId}')">${isEnabled ? 'Disable' : 'Enable'}</button>
-            <button class="btn-secondary btn-small" onclick="editRule('${ruleId}')">Edit</button>
-            <button class="btn-danger btn-small" onclick="deleteRule('${ruleId}')">Delete</button>
+            <button type="button" class="btn-secondary btn-small" onclick="toggleRule('${ruleId}')">${isEnabled ? 'Disable' : 'Enable'}</button>
+            <button type="button" class="btn-primary btn-small" onclick="editRule('${ruleId}')">Edit</button>
+            <button type="button" class="btn-danger btn-small" onclick="deleteRule('${ruleId}')">Delete</button>
           </div>
         </div>
         
