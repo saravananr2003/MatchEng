@@ -179,17 +179,19 @@ def create_app() -> Flask:
         try:
             preview_rows = []
             headers = []
+            total_rows = 0
             with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
                 reader = csv.DictReader(f)
                 headers = reader.fieldnames or []
                 for i, row in enumerate(reader):
-                    if i >= 100:
-                        break
-                    preview_rows.append(dict(row))
+                    total_rows = i + 1
+                    if i < 100:
+                        preview_rows.append(dict(row))
             
             return jsonify({
                 "headers": headers,
-                "preview": preview_rows
+                "preview": preview_rows,
+                "total_rows": total_rows
             })
         except Exception as e:
             return jsonify({"error": str(e)}), 500

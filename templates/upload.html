@@ -188,7 +188,7 @@ async function selectFile(filename) {
       filename: filename,
       headers: data.headers,
       preview: data.preview,
-      total_rows: data.preview.length
+      total_rows: data.total_rows || data.preview.length
     };
     
     showPreview(currentFile);
