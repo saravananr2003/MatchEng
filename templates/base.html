@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en" data-theme="auto">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}MatchEng{% endblock %}</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+  <script>
+    // Apply theme before page renders to prevent flash
+    (function() {
+      const saved = localStorage.getItem('theme') || 'auto';
+      document.documentElement.setAttribute('data-theme', saved);
+    })();
+  </script>
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+  <nav class="main-nav">
+    <div class="nav-brand">MatchEng</div>
+    <div class="nav-links">
+      <a href="/" class="nav-link {% if active_page == 'home' %}active{% endif %}">Home</a>
+      <a href="/upload" class="nav-link {% if active_page == 'upload' %}active{% endif %}">Upload</a>
+      <a href="/process" class="nav-link {% if active_page == 'process' %}active{% endif %}">Process</a>
+      <a href="/results" class="nav-link {% if active_page == 'results' %}active{% endif %}">Results</a>
+      <a href="/settings" class="nav-link {% if active_page == 'settings' %}active{% endif %}">Settings</a>
+      <a href="/rules" class="nav-link {% if active_page == 'rules' %}active{% endif %}">Rules</a>
+      <a href="/columns" class="nav-link {% if active_page == 'columns' %}active{% endif %}">Columns</a>
+    </div>
+    <div class="theme-switcher">
+      <select id="themeSwitcher" onchange="setTheme(this.value)">
+        <option value="auto">Auto</option>
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+      </select>
+    </div>
+  </nav>
+
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="/static/app.js"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>
+

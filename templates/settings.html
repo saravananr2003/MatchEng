@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% set active_page = 'settings' %}
+
+{% block title %}Settings - MatchEng{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Settings</h1>
+  <p class="muted">Configure matching thresholds, scoring weights, and application settings.</p>
+</div>
+
+<div id="status" class="status" hidden></div>
+
+<div class="tabs">
+  <button class="tab-btn active" data-tab="thresholds">Thresholds</button>
+  <button class="tab-btn" data-tab="scoring">Scoring Weights</button>
+  <button class="tab-btn" data-tab="quality">Quality Scores</button>
+  <button class="tab-btn" data-tab="app">Application</button>
+</div>
+
+<!-- Thresholds Tab -->
+<div id="thresholds-tab" class="tab-content active">
+  <div class="card">
+    <div class="card-header">
+      <h2>Matching Thresholds</h2>
+      <button class="btn-primary" onclick="saveThresholds()">Save Changes</button>
+    </div>
+    <div id="thresholds-container" class="settings-grid">
+      <div class="loading">Loading thresholds...</div>
+    </div>
+  </div>
+</div>
+
+<!-- Scoring Weights Tab -->
+<div id="scoring-tab" class="tab-content">
+  <div class="card">
+    <div class="card-header">
+      <h2>Field Weights</h2>
+      <button class="btn-primary" onclick="saveScoringWeights()">Save Changes</button>
+    </div>
+    <div id="scoring-container" class="settings-grid">
+      <div class="loading">Loading scoring weights...</div>
+    </div>
+  </div>
+</div>
+
+<!-- Quality Scores Tab -->
+<div id="quality-tab" class="tab-content">
+  <div class="card">
+    <div class="card-header">
+      <h2>Quality Score Criteria</h2>
+      <button class="btn-primary" onclick="saveQualityScores()">Save Changes</button>
+    </div>
+    <div id="quality-container">
+      <div class="loading">Loading quality scores...</div>
+    </div>
+  </div>
+</div>
+
+<!-- Application Tab -->
+<div id="app-tab" class="tab-content">
+  <div class="card">
+    <div class="card-header">
+      <h2>Application Settings</h2>
+      <button class="btn-primary" onclick="saveAppSettings()">Save Changes</button>
+    </div>
+    <div id="app-container" class="settings-grid">
+      <div class="loading">Loading application settings...</div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/settings.js"></script>
+{% endblock %}
+

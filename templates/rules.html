@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% set active_page = 'rules' %}
+
+{% block title %}Matching Rules - MatchEng{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="header-row">
+    <div>
+      <h1>Matching Rules</h1>
+      <p class="muted">Define business rules for record matching.</p>
+    </div>
+    <button class="btn-primary" onclick="openRuleModal()">+ Add Rule</button>
+  </div>
+</div>
+
+<div id="status" class="status" hidden></div>
+
+<div id="rules-container">
+  <div class="loading">Loading rules...</div>
+</div>
+
+<!-- Rule Modal -->
+<div id="ruleModal" class="modal" hidden>
+  <div class="modal-content modal-large">
+    <div class="modal-header">
+      <h3 id="ruleModalTitle">Add Rule</h3>
+      <button class="modal-close" onclick="closeRuleModal()">&times;</button>
+    </div>
+    <form id="ruleForm" onsubmit="saveRule(event)">
+      <input type="hidden" id="ruleId" name="ruleId" />
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label for="ruleName">Rule Name *</label>
+          <input type="text" id="ruleName" name="name" required placeholder="e.g., Company + Address" />
+        </div>
+        <div class="form-group">
+          <label for="rulePriority">Priority</label>
+          <input type="number" id="rulePriority" name="priority" value="100" min="1" />
+          <small>Lower numbers = higher priority</small>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="ruleDescription">Description</label>
+        <textarea id="ruleDescription" name="description" rows="2" placeholder="Describe what this rule matches"></textarea>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="ruleMatchReason">Match Reason Code</label>
+          <input type="text" id="ruleMatchReason" name="match_reason" placeholder="e.g., CMP_ADDR" />
+        </div>
+        <div class="form-group checkbox-inline">
+          <label>
+            <input type="checkbox" id="ruleEnabled" name="enabled" checked />
+            Enabled
+          </label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Conditions</label>
+        <div id="conditionsContainer"></div>
+        <button type="button" class="btn-secondary btn-small" onclick="addCondition()">+ Add Condition</button>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn-secondary" onclick="closeRuleModal()">Cancel</button>
+        <button type="submit" class="btn-primary">Save Rule</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/rules.js"></script>
+{% endblock %}
+

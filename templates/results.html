@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% set active_page = 'results' %}
+
+{% block title %}Results - MatchEng{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Results</h1>
+  <p class="muted">View and download matching results.</p>
+</div>
+
+<div id="status" class="status" hidden></div>
+
+<div class="card">
+  <div class="card-header">
+    <h2>Output Files</h2>
+    <button class="btn-secondary" onclick="loadResults()">Refresh</button>
+  </div>
+  <div id="resultsContainer">
+    <div class="loading">Loading results...</div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', loadResults);
+
+async function loadResults() {
+  try {
+    const response = await fetch('/api/output-files');
+    const files = await response.json();
+    
+    const container = document.getElementById('resultsContainer');
+    
+    if (files.length === 0) {
+      container.innerHTML = '<p class="muted">No results yet. <a href="/process">Process a file</a> to generate results.</p>';
+      return;
+    }
+    
+    container.innerHTML = `
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Filename</th>
+            <th>Size</th>
+            <th>Created</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${files.map(f => `
+            <tr>
+              <td>${escapeHtml(f.filename)}</td>
+              <td>${formatSize(f.size)}</td>
+              <td>${formatDate(f.modified)}</td>
+              <td>
+                <a href="${f.download_url}" class="btn-primary btn-small" download>Download</a>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  } catch (error) {
+    document.getElementById('resultsContainer').innerHTML = '<p class="muted">Failed to load results.</p>';
+  }
+}
+
+function formatSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function formatDate(isoString) {
+  return new Date(isoString).toLocaleString();
+}
+</script>
+{% endblock %}
+
