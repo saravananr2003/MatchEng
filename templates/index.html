@@ -1,54 +1,32 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>B2B Record De-dup Matching</title>
-    <link rel="stylesheet" href="/static/styles.css" />
-  </head>
-  <body>
-    <main class="container">
-      <div class="header-nav">
-        <h1>B2B Record De-dup Matching</h1>
-        <nav>
-          <a href="/" class="nav-link active">Upload CSV</a>
-          <a href="/config" class="nav-link">Configure Columns</a>
-        </nav>
-      </div>
-      <p class="muted">
-        Upload a CSV file with the configured input columns. Visit the configuration page to manage column settings.
-      </p>
+{% extends "base.html" %}
+{% set active_page = 'home' %}
 
-      <section class="card">
-        <form id="uploadForm">
-          <label class="file">
-            <span>CSV file</span>
-            <input id="fileInput" name="file" type="file" accept=".csv" required />
-          </label>
+{% block title %}MatchEng - Configuration Manager{% endblock %}
 
-          <button id="uploadBtn" type="submit">Upload & Match</button>
-        </form>
+{% block content %}
+<div class="page-header">
+  <h1>Configuration Manager</h1>
+  <p class="muted">Manage matching engine settings, rules, and column configurations.</p>
+</div>
 
-        <div id="status" class="status" hidden></div>
+<div class="dashboard-grid">
+  <a href="/settings" class="dashboard-card">
+    <div class="card-icon">⚙️</div>
+    <h3>Settings</h3>
+    <p>Configure matching thresholds, scoring weights, and application settings.</p>
+  </a>
+  
+  <a href="/rules" class="dashboard-card">
+    <div class="card-icon">📋</div>
+    <h3>Matching Rules</h3>
+    <p>Define and manage business rules for record matching.</p>
+  </a>
+  
+  <a href="/columns" class="dashboard-card">
+    <div class="card-icon">📊</div>
+    <h3>Column Metadata</h3>
+    <p>Configure input/output columns, alternate names, and field properties.</p>
+  </a>
+</div>
+{% endblock %}
 
-        <div id="result" class="result" hidden>
-          <h2>Result</h2>
-          <ul>
-            <li><strong>Processed:</strong> <span id="processed">0</span></li>
-            <li><strong>Matched existing:</strong> <span id="matched">0</span></li>
-            <li><strong>New DeDup IDs:</strong> <span id="newdedup">0</span></li>
-            <li><strong>Errors:</strong> <span id="errors">0</span></li>
-          </ul>
-          <a id="downloadLink" class="download" href="#" download>Download annotated CSV</a>
-        </div>
-      </section>
-
-      <section class="card">
-        <h2>Example CSV header</h2>
-        <pre>Source Type,Source ID,Company Name,Address,Phone Number</pre>
-      </section>
-    </main>
-
-    <script src="/static/app.js"></script>
-  </body>
-</html>

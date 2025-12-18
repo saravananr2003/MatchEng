@@ -1,71 +1,94 @@
-const form = document.getElementById('uploadForm');
-const fileInput = document.getElementById('fileInput');
-const uploadBtn = document.getElementById('uploadBtn');
+// Global utilities
 
-const statusEl = document.getElementById('status');
-const resultEl = document.getElementById('result');
-
-const processedEl = document.getElementById('processed');
-const matchedEl = document.getElementById('matched');
-const newdedupEl = document.getElementById('newdedup');
-const errorsEl = document.getElementById('errors');
-const downloadLink = document.getElementById('downloadLink');
-
-function setStatus(msg, kind = 'info') {
-  statusEl.hidden = false;
-  statusEl.className = `status ${kind}`;
-  statusEl.textContent = msg;
+function showToast(message, type = 'info') {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.className = `toast ${type}`;
+  toast.hidden = false;
+  
+  setTimeout(() => {
+    toast.hidden = true;
+  }, 3000);
 }
 
-function clearStatus() {
-  statusEl.hidden = true;
-  statusEl.textContent = '';
-}
-
-form.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  clearStatus();
-  resultEl.hidden = true;
-
-  const file = fileInput.files?.[0];
-  if (!file) {
-    setStatus('Please select a CSV file.', 'error');
-    return;
+function setStatus(elementId, message, type = 'info') {
+  const el = document.getElementById(elementId);
+  if (el) {
+    el.textContent = message;
+    el.className = `status ${type}`;
+    el.hidden = false;
   }
+}
 
-  uploadBtn.disabled = true;
-  setStatus('Uploading and matching...', 'info');
+function clearStatus(elementId) {
+  const el = document.getElementById(elementId);
+  if (el) {
+    el.hidden = true;
+  }
+}
 
-  try {
-    const fd = new FormData();
-    fd.append('file', file);
+async function fetchJSON(url, options = {}) {
+  const response = await fetch(url, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    },
+    ...options
+  });
+  return response.json();
+}
 
-    const resp = await fetch('/api/upload', {
-      method: 'POST',
-      body: fd,
+async function postJSON(url, data) {
+  return fetchJSON(url, {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+}
+
+async function putJSON(url, data) {
+  return fetchJSON(url, {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  });
+}
+
+async function patchJSON(url, data = {}) {
+  return fetchJSON(url, {
+    method: 'PATCH',
+    body: JSON.stringify(data)
+  });
+}
+
+async function deleteJSON(url) {
+  return fetchJSON(url, {
+    method: 'DELETE'
+  });
+}
+
+// Tab switching
+document.addEventListener('DOMContentLoaded', () => {
+  const tabBtns = document.querySelectorAll('.tab-btn');
+  
+  tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tabId = btn.dataset.tab;
+      
+      // Update buttons
+      tabBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      
+      // Update content
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+      });
+      document.getElementById(`${tabId}-tab`)?.classList.add('active');
     });
-
-    const data = await resp.json();
-    if (!resp.ok) {
-      setStatus(data?.error || 'Upload failed', 'error');
-      if (data?.missing) {
-        setStatus(`Upload failed: missing columns: ${data.missing.join(', ')}`, 'error');
-      }
-      return;
-    }
-
-    processedEl.textContent = data.stats.processed;
-    matchedEl.textContent = data.stats.matched_existing;
-    newdedupEl.textContent = data.stats.new_dedup;
-    errorsEl.textContent = data.stats.errors;
-
-    downloadLink.href = data.download_url;
-
-    resultEl.hidden = false;
-    setStatus('Done. Download the annotated CSV.', 'success');
-  } catch (err) {
-    setStatus(`Unexpected error: ${err}`, 'error');
-  } finally {
-    uploadBtn.disabled = false;
-  }
+  });
 });
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text || '';
+  return div.innerHTML;
+}
+

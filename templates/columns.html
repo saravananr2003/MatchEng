@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% set active_page = 'columns' %}
+
+{% block title %}Column Metadata - MatchEng{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="header-row">
+    <div>
+      <h1>Column Metadata</h1>
+      <p class="muted">Configure input/output columns, alternate names, and field properties.</p>
+    </div>
+    <button class="btn-primary" onclick="openColumnModal()">+ Add Column</button>
+  </div>
+</div>
+
+<div id="status" class="status" hidden></div>
+
+<div class="filter-bar">
+  <input type="text" id="columnSearch" placeholder="Search columns..." onkeyup="filterColumns()" />
+  <select id="groupFilter" onchange="filterColumns()">
+    <option value="">All Groups</option>
+  </select>
+</div>
+
+<div id="columns-container">
+  <div class="loading">Loading columns...</div>
+</div>
+
+<!-- Column Modal -->
+<div id="columnModal" class="modal" hidden>
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 id="columnModalTitle">Add Column</h3>
+      <button class="modal-close" onclick="closeColumnModal()">&times;</button>
+    </div>
+    <form id="columnForm" onsubmit="saveColumn(event)">
+      <input type="hidden" id="originalColumnName" />
+      
+      <div class="form-group">
+        <label for="columnName">Column Name *</label>
+        <input type="text" id="columnName" name="column_name" required placeholder="e.g., COMPANY_NAME" />
+      </div>
+
+      <div class="form-group">
+        <label for="displayLabel">Display Label *</label>
+        <input type="text" id="displayLabel" name="display_label" required placeholder="e.g., Company Name" />
+      </div>
+
+      <div class="form-group">
+        <label for="columnDescription">Description</label>
+        <textarea id="columnDescription" name="description" rows="2" placeholder="Describe this column"></textarea>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="columnGroup">Group *</label>
+          <select id="columnGroup" name="group" required>
+            <option value="input-fields">Input Fields</option>
+            <option value="input-fields-(source)">Source Fields</option>
+            <option value="input-fields-(address)">Address Fields</option>
+            <option value="input-fields-(email)">Email Fields</option>
+            <option value="input-fields-(phone)">Phone Fields</option>
+            <option value="matching-results">Matching Results</option>
+            <option value="confidence-scores">Confidence Scores</option>
+            <option value="similarity-scores">Similarity Scores</option>
+            <option value="standardized-fields">Standardized Fields</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="dataType">Data Type</label>
+          <select id="dataType" name="data_type">
+            <option value="string">String</option>
+            <option value="number">Number</option>
+            <option value="boolean">Boolean</option>
+            <option value="date">Date</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group checkbox-inline">
+        <label>
+          <input type="checkbox" id="columnRequired" name="required" />
+          Required Field
+        </label>
+      </div>
+
+      <div class="form-group">
+        <label for="alternateColumns">Alternate Column Names</label>
+        <textarea id="alternateColumns" name="alternate_columns" rows="3" 
+                  placeholder="Enter alternate names, one per line (e.g., COMP_NAME, BUSINESS_NAME)"></textarea>
+        <small>CSV headers matching these names will be recognized as this column</small>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn-secondary" onclick="closeColumnModal()">Cancel</button>
+        <button type="submit" class="btn-primary">Save Column</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/columns.js"></script>
+{% endblock %}
+
