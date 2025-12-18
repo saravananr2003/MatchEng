@@ -657,6 +657,10 @@ body {
   padding: 20px;
 }
 
+.modal[hidden] {
+  display: none !important;
+}
+
 .modal-content {
   background: var(--bg-card);
   border: 1px solid var(--border-light);
