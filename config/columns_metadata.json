@@ -1,0 +1,491 @@
+{
+    "RECORD_ID": {
+    "description": "Unique identifier for each record in the dataset",
+    "display_label": "Record ID",
+    "group": "input-fields",
+    "required": false,
+    "data_type": "string",
+    "alternate_columns": [
+    "RECID",
+    "RECORDID",
+    "RECORD_ID"
+    ]
+    },
+    "SOURCE_TYPE": {
+    "description": "Data source identifier (e.g., SBA MASTER, SBA BILL TO, SPP MASTER, DNB ACCOUNT, DATA AXLE PLACES, etc. )",
+    "display_label": "Source Type",
+    "group": "input-fields-(source)",
+    "required": true,
+    "data_type": "string",
+    "sequence": 2001,
+    "alternate_columns": [
+    "SOURCETYPE",
+    "SOURCE_TYPE",
+    "SRC_TYPE",
+    "SRC_TYP_CD"
+    ]
+    },
+    "SOURCE_ID": {
+    "description": "An identifier that represents the specific source from which the data record was obtained. ",
+    "display_label": "Source ID",
+    "group": "input-fields-(source)",
+    "required": true,
+    "data_type": "string",
+    "sequence": 2002,
+    "alternate_columns": [
+    "SOURCEID",
+    "SOURCE_ID",
+    "SRC_ID",
+    "SRC_IDENT"
+    ]
+    },
+    "COMPANY_NAME": {
+    "description": "Legal or Trading name of the company",
+    "display_label": "Company Name",
+    "group": "input-fields",
+    "required": true,
+    "data_type": "string",
+    "alternate_columns": [
+    "COMPANYNAME",
+    "COMPANY_NAME",
+    "BUSINESS_NAME",
+    "SITE_NAME",
+    "LEGAL_NAME"
+    ]
+    },
+    "NAICS_CD": {
+    "description": "NAICS is a classification of business establishments by type of economic activity",
+    "display_label": "NAICS Code",
+    "group": "input-fields",
+    "required": false,
+    "data_type": "string",
+    "alternate_columns": [
+    "NAICSCD",
+    "NAICS_CD",
+    "NAICS_CODE"
+    ]
+    },
+    "SIC_CODE": {
+    "description": "The Standard Industrial Classification (SIC) is a system for classifying industries by four-digit code, used to standardize industry classification for statistical purposes across agencies.",
+    "display_label": "SIC Code",
+    "group": "input-fields",
+    "required": false,
+    "data_type": "string",
+    "alternate_columns": [
+    "SICCODE",
+    "SIC_CODE",
+    "SIC"
+    ]
+    },
+    "ADDRESS_LINE_1": {
+    "description": "Primary address line (street number and name)",
+    "display_label": "Address Line 1",
+    "group": "input-fields-(address)",
+    "required": true,
+    "data_type": "string",
+    "alternate_columns": [
+    "ADDRESS1",
+    "ADDRESS_1",
+    "ADDRESSLINE1",
+    "ADDRESS_LINE_1",
+    "ADDR_LINE1",
+    "STREET_ADDRESS"
+    ]
+    },
+    "ADDRESS_LINE_2": {
+    "description": "Secondary address line (suite, apt, floor, etc.)",
+    "display_label": "Address Line 2",
+    "group": "input-fields-(address)",
+    "required": false,
+    "data_type": "string",
+    "alternate_columns": [
+    "ADDRESS2",
+    "ADDRESS_2",
+    "ADDRESSLINE2",
+    "ADDRESS_LINE_2",
+    "ADDR_LINE2",
+    "STREET_ADDRESS_2"
+    ]
+    },
+    "CITY": {
+    "description": "City name",
+    "display_label": "City Name",
+    "group": "input-fields-(address)",
+    "required": false,
+    "data_type": "string",
+    "alternate_columns": [
+    "CITY",
+    "CITY_NAME",
+    "TOWN",
+    "MUNICIPALITY"
+    ]
+    },
+    "STATE": {
+    "description": "State or Province Code",
+    "display_label": "State Code",
+    "group": "input-fields-(address)",
+    "required": false,
+    "data_type": "string",
+    "alternate_columns": [
+    "STATE",
+    "PROVINCE",
+    "STATE_CODE",
+    "PROV_CODE",
+    "STATE_CD"
+    ]
+    },
+    "ZIP_CODE": {
+    "description": "Postal or zip code",
+    "display_label": "Zip Code",
+    "group": "input-fields-(address)",
+    "required": true,
+    "data_type": "string",
+    "alternate_columns": [
+    "ZIP_SUPP",
+    "ZIP5",
+    "ZIP",
+    "ZIPCODE",
+    "ZIP_CODE",
+    "POSTAL_CODE",
+    "POSTCODE"
+    ]
+    },
+    "ZIP4": {
+    "description": "Postal or zip code Supplement",
+    "display_label": "Zip Code Supp.",
+    "group": "input-fields-(address)",
+    "required": false,
+    "data_type": "string",
+    "alternate_columns": [
+    "ZIP4",
+    "ZIP_4",
+    "ZIP4_CODE",
+    "ZIP_4_CODE",
+    "POSTAL_CODE_4",
+    "SUPPLEMENT_ZIP_CODE",
+    "POSTCODE_4"
+    ]
+    },
+    "COUNTRY_CODE": {
+    "description": "Standardized code (ISO country codes) that represents the country associated with the record. ",
+    "display_label": "Country Code",
+    "group": "input-fields-(address)",
+    "required": false,
+    "data_type": "string",
+    "alternate_columns": [
+    "COUNTRY",
+    "COUNTRY_CODE",
+    "COUNTRY_CD",
+    "NATION_CODE"
+    ]
+    },
+    "ADDRESS_VALID_IND": {
+    "description": "Indicates whether the address has been validated",
+    "display_label": "Address Valid Indicator",
+    "group": "input-fields-(address)",
+    "alternate_columns": [
+    "ADDRESSVALIDIND",
+    "ADDRESS_VALID_IND",
+    "ADDR_VALID_IND"
+    ]
+    },
+    "ADDRESS_LOCATION_TYPE": {
+    "description": "Type of address location (e.g., residential, commercial, PO Box)",
+    "display_label": "Address Location Type",
+    "group": "input-fields-(address)",
+    "required": false,
+    "alternate_columns": [
+    "ADDRESSLOCATIONTYPE",
+    "ADDRESS_LOCATION_TYPE",
+    "ADDR_LOCATION_TYPE",
+    "ADDR_LOC_TYPE"
+    ]
+    },
+    "ADDRESS_MARKETABLE_IND": {
+    "description": "Indicates whether the address is suitable for marketing purposes",
+    "display_label": "Address Marketable Indicator",
+    "group": "input-fields-(address)",
+    "required": false,
+    "alternate_columns": [
+    "ADDRESSMARKETABLEIND",
+    "ADDRESS_MARKETABLE_IND",
+    "ADDR_MARKETABLE_IND"
+    ]
+    },
+    "ADDRESS_FAULT_CODE": {
+    "description": "Code indicating address quality or validation issues",
+    "display_label": "Address Fault Code",
+    "group": "input-fields-(address)",
+    "required": false,
+    "alternate_columns": [
+    "ADDRESSFAULTCODE",
+    "ADDRESS_FAULT_CODE",
+    "ADDR_FAULT_CODE"
+    ]
+    },
+    "RESIDENTIAL_DELIVERY_IND": {
+    "description": "Indicates whether the address is a residential delivery location",
+    "display_label": "Residential Delivery Indicator",
+    "group": "input-fields-(address)",
+    "required": false,
+    "alternate_columns": [
+    "RESIDENTIALDELIVERYIND",
+    "RESIDENTIAL_DELIVERY_IND",
+    "RES_DELIV_IND"
+    ]
+    },
+    "EMAIL_ADDRESS": {
+    "description": "Email Address",
+    "display_label": "Email Address",
+    "group": "input-fields-(email)",
+    "alternate_columns": [
+    "EMAILADDRESS",
+    "EMAIL_ADDRESS",
+    "EMAIL",
+    "EMAILADDR",
+    "E_MAIL"
+    ]
+    },
+    "EMAIL_MARKETABLE_IND": {
+    "description": "Indicates whether the email is suitable for marketing purposes",
+    "display_label": "Email Marketable Indicator",
+    "group": "input-fields-(email)",
+    "alternate_columns": [
+    "EMAILMARKETABLEIND",
+    "EMAIL_MARKETABLE_IND",
+    "EMAIL_MKTABLE_IND"
+    ]
+    },
+    "EMAIL_UPDATE_DT": {
+    "description": "Indicates when the email address information was last updated",
+    "display_label": "Email Update Date",
+    "group": "input-fields-(email)",
+    "alternate_columns": [
+    "EMAILUPDATEDT",
+    "EMAIL_UPDATE_DT",
+    "EMAIL_UPD_DT"
+    ]
+    },
+    "PHONE_NUMBER": {
+    "description": "Primary phone number associated with the record",
+    "display_label": "Phone Number",
+    "group": "input-fields-(phone)",
+    "required": true,
+    "alternate_columns": [
+    "PHONENUMBER",
+    "PHONE_NUMBER",
+    "PHONE",
+    "TEL_NUMBER",
+    "TELEPHONE_NUMBER"
+    ]
+    },
+    "PHONE_TYPE": {
+    "description": "Type of phone number (e.g., mobile, landline, toll-free)",
+    "display_label": "Phone Type",
+    "group": "input-fields-(phone)",
+    "required": false,
+    "alternate_columns": [
+    "PHONETYPE",
+    "PHONE_TYPE",
+    "TEL_TYPE",
+    "PHONE_TYP_CD"
+    ]
+    },
+    "PHONE_EXTENSION": {
+    "description": "Phone extension number (separate from main phone number)",
+    "display_label": "Phone Extension",
+    "group": "input-fields-(phone)",
+    "alternate_columns": [
+    "PHONEEXTENSION",
+    "PHONE_EXTENSION",
+    "TEL_EXTENSION",
+    "PHONE_EXT",
+    "EXTENSION"
+    ]
+    },
+    "PHONE_VALID_IND": {
+    "description": "Indicates whether the phone number is valid",
+    "display_label": "Phone Valid Indicator",
+    "group": "input-fields-(phone)",
+    "alternate_columns": [
+    "PHONEVALIDIND",
+    "PHONE_VALID_IND",
+    "TEL_VALID_IND",
+    "PHONE_IS_VALID"
+    ]
+    },
+    "PHONE_MARKETABLE_IND": {
+    "description": "Indicates whether the phone number is suitable for marketing purposes.",
+    "display_label": "Phone Marketable Indicator",
+    "group": "input-fields-(phone)",
+    "alternate_columns": [
+    "PHONEMARKETABLEIND",
+    "PHONE_MARKETABLE_IND",
+    "TEL_MARKETABLE_IND"
+    ]
+    },
+    "PHONE_UPDATE_DT": {
+    "description": "Indicates when the phone number information was last updated.",
+    "display_label": "Phone Update Date",
+    "group": "input-fields-(phone)",
+    "alternate_columns": [
+    "PHONEUPDATEDT",
+    "PHONE_UPDATE_DT",
+    "TEL_UPDATE_DT"
+    ]
+    },
+    "ADDRESS_UPDATE_DT": {
+    "description": "Indicates when the mailing address information was last updated.",
+    "display_label": "Address Update Date",
+    "group": "input-fields-(address)",
+    "alternate_columns": [
+    "ADDRESSUPDATEDT",
+    "ADDRESS_UPDATE_DT",
+    "ADDR_UPDATE_DT"
+    ]
+    },
+    "DEDUP_KEY": {
+    "description": "A unique key generated to identify and eliminate duplicate records within the dataset.",
+    "display_label": "Deduplication Key",
+    "group": "matching-results",
+    "required": false,
+    "alternate_columns": [
+    "DEDUPKEY",
+    "DEDUP_KEY",
+    "DUPLICATE_KEY"
+    ]
+    },
+    "COMPANY_CONFIDENCE": {
+    "description": "Match confidence for company name (0-100)",
+    "display_label": "Company Confidence",
+    "group": "confidence-scores",
+    "required": false,
+    "alternate_columns": [
+    "COMPANY_CONFIDENCE",
+    "COMPANYCONFIDENCE",
+    "COMPANY_CONF"
+    ]
+    },
+    "ADDRESS_CONFIDENCE": {
+    "description": "Match confidence for address (0-100)",
+    "display_label": "Address Confidence",
+    "group": "confidence-scores",
+    "required": false,
+    "alternate_columns": [
+    "ADDRESS_CONFIDENCE",
+    "ADDRESSCONFIDENCE",
+    "ADDR_CONF"
+    ]
+    },
+    "EMAIL_CONFIDENCE": {
+    "description": "Match confidence for email based on quality (0-100)",
+    "display_label": "Email Confidence",
+    "group": "confidence-scores",
+    "required": false,
+    "alternate_columns": [
+    "EMAIL_CONFIDENCE",
+    "EMAILCONFIDENCE",
+    "EMAIL_CONF"
+    ]
+    },
+    "PHONE_CONFIDENCE": {
+    "description": "Match confidence for phone based on quality (0-100)",
+    "display_label": "Phone Confidence",
+    "group": "confidence-scores",
+    "required": false,
+    "alternate_columns": [
+    "PHONE_CONFIDENCE",
+    "PHONECONFIDENCE",
+    "PHONE_CONF"
+    ]
+    },
+    "COMPANY_NAME_SCORE": {
+    "description": "A numerical score representing the similarity between company names during the matching process.",
+    "display_label": "Company Name Similarity Score",
+    "group": "similarity-scores",
+    "required": false,
+    "alternate_columns": [
+    "COMPANYNAMESCORE",
+    "COMPANY_NAME_SCORE",
+    "NAME_SCORE"
+    ]
+    },
+    "ADDRESS_1_SCORE": {
+    "description": "A numerical score representing the similarity between primary address lines during the matching process.",
+    "display_label": "Address Line 1 Similarity Score",
+    "group": "similarity-scores",
+    "required": false,
+    "alternate_columns": [
+    "ADDRESS1SCORE",
+    "ADDRESS_1_SCORE",
+    "ADDR_LINE1_SCORE"
+    ]
+    },
+    "ADDRESS_2_SCORE": {
+    "description": "A numerical score representing the similarity between secondary address lines during the matching process.",
+    "display_label": "Address Line 2 Similarity Score",
+    "group": "similarity-scores",
+    "required": false,
+    "alternate_columns": [
+    "ADDRESS2SCORE",
+    "ADDRESS_2_SCORE",
+    "ADDR_LINE2_SCORE"
+    ]
+    },
+    "COMPANY_NAME_STD": {
+    "description": "Standardized company name (suffixes removed, normalized)",
+    "display_label": "Company Name",
+    "group": "standardized-fields",
+    "required": false,
+    "alternate_columns": [
+    "COMPANY_NAME_STD",
+    "COMPANYNAMESTD",
+    "STD_COMPANY_NAME"
+    ]
+    },
+    "ADDRESS1_STD": {
+    "description": "Standardized address line 1 (abbreviations normalized)",
+    "display_label": "Address1",
+    "group": "standardized-fields",
+    "required": false,
+    "alternate_columns": [
+    "ADDRESS1_STD",
+    "ADDRESSLINE1STD",
+    "STD_ADDRESS1"
+    ]
+    },
+    "ADDRESS2_STD": {
+    "description": "Standardized address line 2 (abbreviations normalized)",
+    "display_label": "Address2",
+    "group": "standardized-fields",
+    "required": false,
+    "alternate_columns": [
+    "ADDRESS2_STD",
+    "ADDRESSLINE2STD",
+    "STD_ADDRESS2"
+    ]
+    },
+    "PHONE_STD": {
+    "description": "Standardized phone number (formatted as (XXX) XXX-XXXX)",
+    "display_label": "Phone",
+    "group": "standardized-fields",
+    "required": false,
+    "alternate_columns": [
+    "PHONE_STD",
+    "PHONESTD",
+    "STD_PHONE"
+    ]
+    },
+    "PHONE_EXTENSION_STD": {
+    "description": "Phone extension extracted from phone number during standardization. Contains only digits.",
+    "display_label": "Phone Extension",
+    "group": "standardized-fields",
+    "required": false,
+    "alternate_columns": [
+    "PHONE_EXTENSION_STD",
+    "PHONE_EXT_STD",
+    "STD_PHONE_EXT",
+    "EXTENSION_STD"
+    ]
+    }
+   }

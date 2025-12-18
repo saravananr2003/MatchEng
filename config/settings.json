@@ -1,0 +1,201 @@
+{
+    "app": {
+      "secret_key": "your-secret-key-change-this-in-production",
+      "upload_folder": "datafiles/incoming",
+      "output_folder": "datafiles/output",
+      "process_folder": "datafiles/process",
+      "allowed_extensions": [
+        "csv"
+      ],
+      "max_file_size_mb": 50
+    },
+    "matching": {
+      "company_name_threshold": 90,
+      "address_line_1_threshold": 80,
+      "address_line_2_threshold": 90,
+      "city_threshold": 85,
+      "state_threshold": 100,
+      "zip_code_threshold": 100,
+      "zip_supp_threshold": 100,
+      "email_threshold": 100,
+      "phone_threshold": 100,
+      "allow_null_match": false,
+      "batch_size": 5000
+    },
+    "ml": {
+      "enabled": true,
+      "model_path": "datafiles/models/",
+      "confidence_threshold": 0.75,
+      "update_frequency": 100
+    },
+    "scoring": {
+      "field_weights": {
+        "company_name": 0.3,
+        "address": 0.25,
+        "email": 0.25,
+        "phone": 0.2
+      }
+    },
+    "logging": {
+      "level": "INFO",
+      "file": "datafiles/logs/matching_engine.log"
+    },
+    "dedup": {
+      "persistence_file": "datafiles/models/dedup_mappings.json"
+    },
+    "thresholds": {
+      "company_name": {
+        "value": 80.0,
+        "min": 0,
+        "max": 100,
+        "description": "Minimum similarity percentage for company name matching",
+        "group": "company",
+        "allow_blank": false
+      },
+      "address1": {
+        "value": 80.0,
+        "min": 0,
+        "max": 100,
+        "description": "Minimum similarity percentage for address line 1 matching",
+        "group": "address",
+        "allow_blank": false
+      },
+      "address2": {
+        "value": 90.0,
+        "min": 0,
+        "max": 100,
+        "description": "Minimum similarity percentage for address line 2 matching",
+        "group": "address",
+        "allow_blank": true
+      },
+      "city": {
+        "value": 85.0,
+        "min": 0,
+        "max": 100,
+        "description": "Minimum similarity percentage for city name matching",
+        "group": "address",
+        "allow_blank": false
+      },
+      "state": {
+        "value": 100.0,
+        "min": 0,
+        "max": 100,
+        "description": "Minimum similarity percentage for state code matching (exact match)",
+        "group": "address",
+        "allow_blank": false
+      },
+      "zip_code": {
+        "value": 100.0,
+        "min": 0,
+        "max": 100,
+        "description": "Minimum similarity percentage for ZIP code matching (exact match)",
+        "group": "address",
+        "allow_blank": false
+      },
+      "zip_supp": {
+        "value": 100.0,
+        "min": 0,
+        "max": 100,
+        "description": "Minimum similarity percentage for ZIP+4 supplement matching (exact match)",
+        "group": "address",
+        "allow_blank": true
+      },
+      "email": {
+        "value": 100.0,
+        "min": 0,
+        "max": 100,
+        "description": "Minimum similarity percentage for email matching (exact match)",
+        "group": "contact",
+        "allow_blank": false
+      },
+      "phone": {
+        "value": 100.0,
+        "min": 0,
+        "max": 100,
+        "description": "Minimum similarity percentage for phone matching (exact match)",
+        "group": "contact",
+        "allow_blank": false
+      }
+    },
+    "quality_scores": {
+      "email": {
+        "criteria": {
+          "valid_format": {
+            "percentage": 100,
+            "max_points": 20,
+            "description": "Valid email format (has @, domain, etc.)"
+          },
+          "non_personal": {
+            "percentage": 100,
+            "max_points": 20,
+            "description": "Business email, not personal (@gmail, @yahoo, etc.)"
+          },
+          "non_generic": {
+            "percentage": 100,
+            "max_points": 20,
+            "description": "Not generic mailbox (not info@, contact@, sales@)"
+          },
+          "non_admin": {
+            "percentage": 100,
+            "max_points": 20,
+            "description": "Not admin/helpdesk (not admin@, support@, help@)"
+          },
+          "non_department": {
+            "percentage": 100,
+            "max_points": 20,
+            "description": "Not department email (not hr@, finance@, marketing@)"
+          }
+        }
+      },
+      "phone": {
+        "criteria": {
+          "has_10_digits": {
+            "percentage": 91,
+            "max_points": 11,
+            "description": "10 digits for US phone numbers"
+          },
+          "not_all_same": {
+            "percentage": 91,
+            "max_points": 11,
+            "description": "Not all digits are the same"
+          },
+          "valid_area_code": {
+            "percentage": 100,
+            "max_points": 11,
+            "description": "Valid area code (200-999, not starting with 0 or 1)"
+          },
+          "valid_exchange": {
+            "percentage": 100,
+            "max_points": 11,
+            "description": "Valid exchange code (not starting with 0 or 1)"
+          },
+          "valid_line_number": {
+            "percentage": 73,
+            "max_points": 11,
+            "description": "Valid line number (not all zeros)"
+          },
+          "not_toll_free": {
+            "percentage": 100,
+            "max_points": 12,
+            "description": "Not a toll-free number (800, 888, 877, 866, 855, 844, 833)"
+          },
+          "not_main_line": {
+            "percentage": 100,
+            "max_points": 11,
+            "description": "Not a main line pattern (ends in 000, 0000, etc.)"
+          },
+          "has_extension": {
+            "percentage": 45,
+            "max_points": 11,
+            "description": "Has extension if main line detected"
+          },
+          "high_quality": {
+            "percentage": 100,
+            "max_points": 11,
+            "description": "High quality indicators (no sequential patterns, no repeating blocks)"
+          }
+        }
+      }
+    }
+  }
+  
