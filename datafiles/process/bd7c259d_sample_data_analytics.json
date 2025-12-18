@@ -1,0 +1,279 @@
+{
+  "summary": {
+    "total_rows": 100,
+    "total_columns": 34,
+    "processed_at": "2025-12-18T18:25:29.587864"
+  },
+  "column_completeness": {
+    "RECORD_ID": {
+      "filled": 0,
+      "empty": 100,
+      "completeness_pct": 0.0
+    },
+    "SOURCE_TYPE": {
+      "filled": 0,
+      "empty": 100,
+      "completeness_pct": 0.0
+    },
+    "SOURCE_ID": {
+      "filled": 0,
+      "empty": 100,
+      "completeness_pct": 0.0
+    },
+    "COMPANY_NAME": {
+      "filled": 0,
+      "empty": 100,
+      "completeness_pct": 0.0
+    },
+    "NAICS_CD": {
+      "filled": 0,
+      "empty": 100,
+      "completeness_pct": 0.0
+    },
+    "SIC_CODE": {
+      "filled": 0,
+      "empty": 100,
+      "completeness_pct": 0.0
+    },
+    "ADDRESS_LINE_1": {
+      "filled": 0,
+      "empty": 100,
+      "completeness_pct": 0.0
+    },
+    "ADDRESS_LINE_2": {
+      "filled": 11,
+      "empty": 89,
+      "completeness_pct": 11.0
+    },
+    "CITY": {
+      "filled": 66,
+      "empty": 34,
+      "completeness_pct": 66.0
+    },
+    "STATE": {
+      "filled": 66,
+      "empty": 34,
+      "completeness_pct": 66.0
+    },
+    "ZIP_CODE": {
+      "filled": 66,
+      "empty": 34,
+      "completeness_pct": 66.0
+    },
+    "ZIP4": {
+      "filled": 31,
+      "empty": 69,
+      "completeness_pct": 31.0
+    },
+    "COUNTRY_CODE": {
+      "filled": 0,
+      "empty": 100,
+      "completeness_pct": 0.0
+    },
+    "ADDRESS_VALID_IND": {
+      "filled": 0,
+      "empty": 100,
+      "completeness_pct": 0.0
+    },
+    "ADDRESS_LOCATION_TYPE": {
+      "filled": 0,
+      "empty": 100,
+      "completeness_pct": 0.0
+    },
+    "ADDRESS_MARKETABLE_IND": {
+      "filled": 0,
+      "empty": 100,
+      "completeness_pct": 0.0
+    },
+    "ADDRESS_FAULT_CODE": {
+      "filled": 0,
+      "empty": 100,
+      "completeness_pct": 0.0
+    },
+    "RESIDENTIAL_DELIVERY_IND": {
+      "filled": 0,
+      "empty": 100,
+      "completeness_pct": 0.0
+    },
+    "EMAIL_ADDRESS": {
+      "filled": 0,
+      "empty": 100,
+      "completeness_pct": 0.0
+    },
+    "EMAIL_MARKETABLE_IND": {
+      "filled": 0,
+      "empty": 100,
+      "completeness_pct": 0.0
+    },
+    "EMAIL_UPDATE_DT": {
+      "filled": 0,
+      "empty": 100,
+      "completeness_pct": 0.0
+    },
+    "PHONE_NUMBER": {
+      "filled": 0,
+      "empty": 100,
+      "completeness_pct": 0.0
+    },
+    "PHONE_TYPE": {
+      "filled": 0,
+      "empty": 100,
+      "completeness_pct": 0.0
+    },
+    "PHONE_EXTENSION": {
+      "filled": 0,
+      "empty": 100,
+      "completeness_pct": 0.0
+    },
+    "PHONE_VALID_IND": {
+      "filled": 0,
+      "empty": 100,
+      "completeness_pct": 0.0
+    },
+    "PHONE_MARKETABLE_IND": {
+      "filled": 0,
+      "empty": 100,
+      "completeness_pct": 0.0
+    },
+    "PHONE_UPDATE_DT": {
+      "filled": 0,
+      "empty": 100,
+      "completeness_pct": 0.0
+    },
+    "ADDRESS_UPDATE_DT": {
+      "filled": 0,
+      "empty": 100,
+      "completeness_pct": 0.0
+    },
+    "Record ID": {
+      "filled": 100,
+      "empty": 0,
+      "completeness_pct": 100.0
+    },
+    "Company Name": {
+      "filled": 100,
+      "empty": 0,
+      "completeness_pct": 100.0
+    },
+    "Address 1": {
+      "filled": 74,
+      "empty": 26,
+      "completeness_pct": 74.0
+    },
+    "phone number": {
+      "filled": 80,
+      "empty": 20,
+      "completeness_pct": 80.0
+    },
+    "naics code": {
+      "filled": 73,
+      "empty": 27,
+      "completeness_pct": 73.0
+    },
+    "duns number": {
+      "filled": 61,
+      "empty": 39,
+      "completeness_pct": 61.0
+    }
+  },
+  "data_quality": {
+    "overall_score": 37.5,
+    "completeness_score": 21.4,
+    "duplicate_penalty": 0.0,
+    "grade": "F"
+  },
+  "field_analytics": {
+    "email": {
+      "total": 100,
+      "valid": 0,
+      "invalid": 100,
+      "validity_pct": 0.0,
+      "unique": 0
+    },
+    "phone": {
+      "total": 100,
+      "valid": 0,
+      "invalid": 100,
+      "validity_pct": 0.0,
+      "unique": 0
+    },
+    "zip_code": {
+      "total": 100,
+      "valid": 66,
+      "invalid": 34,
+      "validity_pct": 66.0,
+      "unique": 17
+    },
+    "state": {
+      "unique_states": 12,
+      "top_states": {
+        "TX": 13,
+        "CA": 13,
+        "MA": 6,
+        "OH": 5,
+        "GA": 5,
+        "WA": 5,
+        "AZ": 5,
+        "NY": 4,
+        "IL": 3,
+        "FL": 3
+      }
+    },
+    "company_name": {
+      "total": 0,
+      "unique": 0,
+      "avg_length": 0
+    }
+  },
+  "duplicates": {
+    "exact_duplicates": 0,
+    "potential_duplicates": {
+      "company_phone": {
+        "duplicate_count": 0,
+        "fields": [
+          "COMPANY_NAME",
+          "PHONE_NUMBER"
+        ]
+      },
+      "company_address": {
+        "duplicate_count": 49,
+        "fields": [
+          "COMPANY_NAME",
+          "ADDRESS_LINE_1",
+          "ZIP_CODE"
+        ]
+      },
+      "email": {
+        "duplicate_count": 0,
+        "fields": [
+          "EMAIL_ADDRESS"
+        ]
+      },
+      "phone": {
+        "duplicate_count": 0,
+        "fields": [
+          "PHONE_NUMBER"
+        ]
+      }
+    },
+    "duplicate_groups": []
+  },
+  "value_distributions": {
+    "STATE": {
+      "unique_values": 12,
+      "top_values": {
+        "TX": 13,
+        "CA": 13,
+        "MA": 6,
+        "OH": 5,
+        "GA": 5,
+        "WA": 5,
+        "AZ": 5,
+        "NY": 4,
+        "IL": 3,
+        "FL": 3
+      },
+      "total_filled": 66
+    }
+  }
+}

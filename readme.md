@@ -82,7 +82,7 @@ The Matching Engine is a sophisticated data deduplication and matching platform 
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                    Web UI (Flask)                       │
-│  Upload → Map Fields → Configure → Process → Results   │
+│  Upload → Map Fields → Configure → Process → Results    │
 └────────────────────┬────────────────────────────────────┘
                      │
 ┌────────────────────┴────────────────────────────────────┐
@@ -103,7 +103,7 @@ The Matching Engine is a sophisticated data deduplication and matching platform 
 ┌────────────────────┴────────────────────────────────────┐
 │                  Data Layer                             │
 │  - CSV Cache                                            │
-│  - Dedup Persistence (dedup_mappings.json)             │
+│  - Dedup Persistence (dedup_mappings.json)              │
 │  - Configuration Files (JSON)                           │
 │  - ML Models                                            │
 └─────────────────────────────────────────────────────────┘
