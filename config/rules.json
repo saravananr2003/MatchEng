@@ -79,15 +79,6 @@
             ],
             "priority": 200,
             "id": "BR002"
-        },
-        "BR003": {
-            "id": "BR003",
-            "name": "s",
-            "description": "s",
-            "priority": 100,
-            "match_reason": "s",
-            "enabled": true,
-            "conditions": []
         }
     }
 }
