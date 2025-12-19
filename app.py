@@ -236,7 +236,10 @@ def create_app() -> Flask:
             return jsonify(result)
         except Exception as e:
             import traceback
-            return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+            # Log full traceback server-side for debugging
+            app.logger.error(f"Error processing file: {str(e)}\n{traceback.format_exc()}")
+            # Return safe error message to client (no sensitive information)
+            return jsonify({"error": "Failed to process file. Please check the file format and try again."}), 500
     
     @app.get("/api/processed-files")
     def list_processed_files():
@@ -294,7 +297,9 @@ def create_app() -> Flask:
     def delete_processed_file(filename: str):
         """Delete a processed file and its analytics."""
         process_dir = Path(app.config["PROCESS_FOLDER"])
-        file_path = process_dir / secure_filename(filename)
+        # Sanitize filename first to prevent path traversal
+        safe_filename = secure_filename(filename)
+        file_path = process_dir / safe_filename
         
         if not file_path.exists():
             return jsonify({"error": "File not found"}), 404
@@ -303,7 +308,8 @@ def create_app() -> Flask:
         file_path.unlink()
         
         # Delete corresponding analytics file if exists
-        analytics_name = filename.replace("_processed.csv", "_analytics.json")
+        # Derive analytics name from sanitized filename to prevent path traversal
+        analytics_name = safe_filename.replace("_processed.csv", "_analytics.json")
         analytics_path = process_dir / analytics_name
         if analytics_path.exists():
             analytics_path.unlink()
@@ -399,7 +405,10 @@ def create_app() -> Flask:
             return jsonify({"ok": True, "stats": stats})
         except Exception as e:
             import traceback
-            return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+            # Log full traceback server-side for debugging
+            app.logger.error(f"Error running matching process: {str(e)}\n{traceback.format_exc()}")
+            # Return safe error message to client (no sensitive information)
+            return jsonify({"error": "Failed to process matching. Please check your configuration and try again."}), 500
     
     @app.get("/download/<filename>")
     def download_file(filename: str):

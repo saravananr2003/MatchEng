@@ -244,6 +244,28 @@ document.addEventListener('DOMContentLoaded', () => {
   setupResizeHandle();
   
   document.getElementById('fileInput').addEventListener('change', handleFileSelect);
+  
+  // Set up event delegation for column checkboxes (safe from XSS)
+  const columnCheckboxes = document.getElementById('columnCheckboxes');
+  if (columnCheckboxes) {
+    columnCheckboxes.addEventListener('change', (e) => {
+      if (e.target.type === 'checkbox' && e.target.dataset.column) {
+        toggleColumn(e.target.dataset.column);
+      }
+    });
+  }
+  
+  // Set up event delegation for file list buttons (safe from XSS)
+  const fileList = document.getElementById('fileList');
+  if (fileList) {
+    fileList.addEventListener('click', (e) => {
+      if (e.target.classList.contains('btn-select-file') && e.target.dataset.filename) {
+        selectFile(e.target.dataset.filename);
+      } else if (e.target.classList.contains('btn-delete-file') && e.target.dataset.filename) {
+        deleteFile(e.target.dataset.filename);
+      }
+    });
+  }
 });
 
 function setupResizeHandle() {
@@ -350,7 +372,7 @@ function buildColumnSelector(headers) {
   const container = document.getElementById('columnCheckboxes');
   container.innerHTML = headers.map(h => `
     <label>
-      <input type="checkbox" value="${escapeHtml(h)}" checked onchange="toggleColumn('${escapeHtml(h)}')">
+      <input type="checkbox" value="${escapeHtml(h)}" data-column="${escapeHtml(h)}" checked>
       ${escapeHtml(h)}
     </label>
   `).join('');
@@ -439,8 +461,8 @@ async function loadFileList() {
           <span class="file-meta">${formatSize(f.size)} • ${formatDate(f.modified)}</span>
         </div>
         <div class="file-actions">
-          <button class="btn-secondary btn-small" onclick="selectFile('${escapeHtml(f.filename)}')">Select</button>
-          <button class="btn-danger btn-small" onclick="deleteFile('${escapeHtml(f.filename)}')">Delete</button>
+          <button class="btn-secondary btn-small btn-select-file" data-filename="${escapeHtml(f.filename)}">Select</button>
+          <button class="btn-danger btn-small btn-delete-file" data-filename="${escapeHtml(f.filename)}">Delete</button>
         </div>
       </div>
     `).join('');

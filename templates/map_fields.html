@@ -62,6 +62,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderMapping();
   renderPreview();
   autoMap();
+  
+  // Set up event delegation for mapping selects (safe from XSS)
+  const mappingContainer = document.getElementById('mappingContainer');
+  if (mappingContainer) {
+    mappingContainer.addEventListener('change', (e) => {
+      if (e.target.classList.contains('mapping-select') && e.target.dataset.sourceColumn) {
+        updateMapping(e.target.dataset.sourceColumn, e.target.value);
+      }
+    });
+  }
 });
 
 function renderMapping() {
@@ -99,7 +109,7 @@ function renderMapping() {
         <div class="arrow">→</div>
         <div class="target-column">
           <label>Standard Field</label>
-          <select id="map_${header}" onchange="updateMapping('${escapeHtml(header)}', this.value)">
+          <select id="map_${header}" data-source-column="${escapeHtml(header)}" class="mapping-select">
             ${options}
           </select>
         </div>

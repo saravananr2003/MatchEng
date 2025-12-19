@@ -198,12 +198,16 @@ function renderAnalytics(analytics, container) {
     for (const [field, data] of Object.entries(value_distributions)) {
       if (data.top_values && Object.keys(data.top_values).length > 0) {
         const maxCount = Math.max(...Object.values(data.top_values));
+        // Sort by count descending (largest first)
+        const sortedEntries = Object.entries(data.top_values)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 10);
         
         html += `
           <div class="field-stat-card">
             <h4>${formatFieldName(field)}</h4>
             <div class="distribution-chart">
-              ${Object.entries(data.top_values).slice(0, 10).map(([value, count]) => `
+              ${sortedEntries.map(([value, count]) => `
                 <div class="distribution-item">
                   <span class="distribution-label" title="${escapeHtml(value)}">${escapeHtml(value) || '(empty)'}</span>
                   <div class="distribution-bar-container">
@@ -253,9 +257,11 @@ function renderAnalytics(analytics, container) {
                 <td>${data.filled.toLocaleString()}</td>
                 <td>${data.empty.toLocaleString()}</td>
                 <td>
-                  <div class="completeness-bar">
-                    <div class="completeness-bar-fill ${getQualityClass(data.completeness_pct)}" style="width: ${data.completeness_pct}%"></div>
-                    <span class="completeness-bar-text">${data.completeness_pct}%</span>
+                  <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div class="completeness-bar" style="flex: 1; min-width: 100px;">
+                      <div class="completeness-bar-fill ${getQualityClass(data.completeness_pct)}" style="width: ${data.completeness_pct}%"></div>
+                    </div>
+                    <span style="font-weight: 600; min-width: 50px; text-align: right;">${data.completeness_pct}%</span>
                   </div>
                 </td>
               </tr>

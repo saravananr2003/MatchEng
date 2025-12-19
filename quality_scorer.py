@@ -2,31 +2,160 @@
 Quality scoring module for email and phone data.
 """
 
+import json
 import re
-from typing import Dict, Any
+import sqlite3
+from pathlib import Path
+from typing import Dict, Any, Set
 
 
-# Personal email domains
-PERSONAL_DOMAINS = {
-    'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'aol.com',
-    'icloud.com', 'mail.com', 'protonmail.com', 'zoho.com', 'yandex.com',
-    'live.com', 'msn.com', 'comcast.net', 'att.net', 'verizon.net'
-}
+def get_db_path() -> str:
+    """Get the path to the quality metadata SQLite database."""
+    base_dir = Path(__file__).parent
+    db_path = str(base_dir / "config" / "quality_metadata.db")
+    return db_path
 
-# Generic mailbox prefixes
-GENERIC_PREFIXES = {
-    'info', 'contact', 'sales', 'support', 'admin', 'help', 'service',
-    'webmaster', 'postmaster', 'noreply', 'no-reply', 'hello', 'enquiries'
-}
 
-# Department prefixes
-DEPARTMENT_PREFIXES = {
-    'hr', 'finance', 'marketing', 'legal', 'accounting', 'billing',
-    'operations', 'engineering', 'it', 'tech', 'development'
-}
+def init_quality_metadata_db(db_path: str = None) -> None:
+    """Initialize the SQLite database with schema and default data."""
+    if db_path is None:
+        db_path = get_db_path()
+    
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    
+    # Create tables
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS personal_domains (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            domain TEXT UNIQUE NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS generic_prefixes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            prefix TEXT UNIQUE NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS department_prefixes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            prefix TEXT UNIQUE NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS toll_free_codes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            code TEXT UNIQUE NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    # Check if database is empty
+    cursor.execute('SELECT COUNT(*) FROM personal_domains')
+    if cursor.fetchone()[0] == 0:
+        # Database is empty, populate with default data
+        # Try to load from JSON first, otherwise use hardcoded defaults
+        json_path = Path(__file__).parent / "config" / "quality_metadata.json"
+        if json_path.exists():
+            try:
+                with open(json_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    personal_domains = data.get('personal_domains', [])
+                    generic_prefixes = data.get('generic_prefixes', [])
+                    department_prefixes = data.get('department_prefixes', [])
+                    toll_free_codes = data.get('toll_free_codes', [])
+            except (json.JSONDecodeError, KeyError):
+                personal_domains = generic_prefixes = department_prefixes = toll_free_codes = []
+        else:
+            personal_domains = generic_prefixes = department_prefixes = toll_free_codes = []
+        
+        # Use defaults if JSON didn't provide data
+        if not personal_domains:
+            personal_domains = [
+                'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'aol.com',
+                'icloud.com', 'mail.com', 'protonmail.com', 'zoho.com', 'yandex.com',
+                'live.com', 'msn.com', 'comcast.net', 'att.net', 'verizon.net'
+            ]
+        if not generic_prefixes:
+            generic_prefixes = [
+                'info', 'contact', 'sales', 'support', 'admin', 'help', 'service',
+                'webmaster', 'postmaster', 'noreply', 'no-reply', 'hello', 'enquiries'
+            ]
+        if not department_prefixes:
+            department_prefixes = [
+                'hr', 'finance', 'marketing', 'legal', 'accounting', 'billing',
+                'operations', 'engineering', 'it', 'tech', 'development'
+            ]
+        if not toll_free_codes:
+            toll_free_codes = ['800', '888', '877', '866', '855', '844', '833']
+        
+        # Insert default data
+        for domain in personal_domains:
+            cursor.execute('INSERT OR IGNORE INTO personal_domains (domain) VALUES (?)', (domain,))
+        
+        for prefix in generic_prefixes:
+            cursor.execute('INSERT OR IGNORE INTO generic_prefixes (prefix) VALUES (?)', (prefix,))
+        
+        for prefix in department_prefixes:
+            cursor.execute('INSERT OR IGNORE INTO department_prefixes (prefix) VALUES (?)', (prefix,))
+        
+        for code in toll_free_codes:
+            cursor.execute('INSERT OR IGNORE INTO toll_free_codes (code) VALUES (?)', (code,))
+    
+    conn.commit()
+    conn.close()
 
-# Toll-free area codes
-TOLL_FREE_CODES = {'800', '888', '877', '866', '855', '844', '833'}
+
+def load_quality_metadata_from_db(db_path: str = None) -> Dict[str, Set[str]]:
+    """Load quality metadata from SQLite database."""
+    if db_path is None:
+        db_path = get_db_path()
+    
+    # Initialize database if it doesn't exist
+    init_quality_metadata_db(db_path)
+    
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    
+    # Load personal domains
+    cursor.execute('SELECT domain FROM personal_domains')
+    personal_domains = {row[0] for row in cursor.fetchall()}
+    
+    # Load generic prefixes
+    cursor.execute('SELECT prefix FROM generic_prefixes')
+    generic_prefixes = {row[0] for row in cursor.fetchall()}
+    
+    # Load department prefixes
+    cursor.execute('SELECT prefix FROM department_prefixes')
+    department_prefixes = {row[0] for row in cursor.fetchall()}
+    
+    # Load toll-free codes
+    cursor.execute('SELECT code FROM toll_free_codes')
+    toll_free_codes = {row[0] for row in cursor.fetchall()}
+    
+    conn.close()
+    
+    return {
+        'personal_domains': personal_domains,
+        'generic_prefixes': generic_prefixes,
+        'department_prefixes': department_prefixes,
+        'toll_free_codes': toll_free_codes
+    }
+
+
+# Load metadata once at module level
+_QUALITY_METADATA = load_quality_metadata_from_db()
+PERSONAL_DOMAINS = _QUALITY_METADATA['personal_domains']
+GENERIC_PREFIXES = _QUALITY_METADATA['generic_prefixes']
+DEPARTMENT_PREFIXES = _QUALITY_METADATA['department_prefixes']
+TOLL_FREE_CODES = _QUALITY_METADATA['toll_free_codes']
 
 
 def calculate_email_quality(email: str, config: Dict = None) -> Dict[str, Any]:
