@@ -1,0 +1,57 @@
+{
+  "personal_domains": [
+    "gmail.com",
+    "yahoo.com",
+    "hotmail.com",
+    "outlook.com",
+    "aol.com",
+    "icloud.com",
+    "mail.com",
+    "protonmail.com",
+    "zoho.com",
+    "yandex.com",
+    "live.com",
+    "msn.com",
+    "comcast.net",
+    "att.net",
+    "verizon.net"
+  ],
+  "generic_prefixes": [
+    "info",
+    "contact",
+    "sales",
+    "support",
+    "admin",
+    "help",
+    "service",
+    "webmaster",
+    "postmaster",
+    "noreply",
+    "no-reply",
+    "hello",
+    "enquiries"
+  ],
+  "department_prefixes": [
+    "hr",
+    "finance",
+    "marketing",
+    "legal",
+    "accounting",
+    "billing",
+    "operations",
+    "engineering",
+    "it",
+    "tech",
+    "development"
+  ],
+  "toll_free_codes": [
+    "800",
+    "888",
+    "877",
+    "866",
+    "855",
+    "844",
+    "833"
+  ]
+}
+

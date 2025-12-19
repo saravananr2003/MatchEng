@@ -1,0 +1,457 @@
+{
+  "confidence_scores": [
+    {
+      "column_name": "company_confidence",
+      "default_selected": false,
+      "sequence": 201
+    },
+    {
+      "column_name": "address_confidence",
+      "default_selected": false,
+      "sequence": 202
+    },
+    {
+      "column_name": "email_confidence",
+      "default_selected": false,
+      "description": "Match confidence for email based on quality (0-100)",
+      "display_label": "Email Confidence",
+      "group": "confidence-scores",
+      "sequence": 203
+    },
+    {
+      "column_name": "phone_confidence",
+      "default_selected": false,
+      "description": "Match confidence for phone based on quality (0-100)",
+      "display_label": "Phone Confidence",
+      "group": "confidence-scores",
+      "sequence": 204
+    },
+    {
+      "column_name": "email1_quality",
+      "default_selected": false,
+      "description": "Quality score for first email: Invalid (0-25), Generic (26-50), Personal (51-75), Business (76-100)",
+      "display_label": "Email 1 Quality",
+      "group": "confidence-scores",
+      "sequence": 205
+    },
+    {
+      "column_name": "email2_quality",
+      "default_selected": false,
+      "description": "Quality score for second email: Invalid (0-25), Generic (26-50), Personal (51-75), Business (76-100)",
+      "display_label": "Email 2 Quality",
+      "group": "confidence-scores",
+      "sequence": 206
+    },
+    {
+      "column_name": "phone1_quality",
+      "default_selected": false,
+      "description": "Quality score for first phone: Invalid (0-5), Toll-free (6-30), Low area (31-50), Main line (51-70), High quality (71-100)",
+      "display_label": "Phone 1 Quality",
+      "group": "confidence-scores",
+      "sequence": 207
+    },
+    {
+      "column_name": "phone2_quality",
+      "default_selected": false,
+      "description": "Quality score for second phone: Invalid (0-5), Toll-free (6-30), Low area (31-50), Main line (51-70), High quality (71-100)",
+      "display_label": "Phone 2 Quality",
+      "group": "confidence-scores",
+      "sequence": 208
+    },
+    {
+      "column_name": "name_address_confidence",
+      "default_selected": false,
+      "description": "Combined confidence score for company name and address match (0-100)",
+      "display_label": "Name & Address Confidence",
+      "group": "confidence-scores",
+      "sequence": 209
+    },
+    {
+      "column_name": "name_email_confidence",
+      "default_selected": false,
+      "description": "Combined confidence score for company name and email match (0-100)",
+      "display_label": "Name & Email Confidence",
+      "group": "confidence-scores",
+      "sequence": 210
+    },
+    {
+      "column_name": "name_phone_confidence",
+      "default_selected": false,
+      "description": "Combined confidence score for company name and phone match (0-100)",
+      "display_label": "Name & Phone Confidence",
+      "group": "confidence-scores",
+      "sequence": 211
+    },
+    {
+      "column_name": "email_quality_valid_format",
+      "default_selected": false,
+      "description": "Email quality score for valid format criteria",
+      "display_label": "Email: Valid Format Score",
+      "group": "confidence-scores-(email-quality)",
+      "sequence": 221
+    },
+    {
+      "column_name": "email_quality_non_personal",
+      "default_selected": false,
+      "description": "Email quality score for non-personal (business) criteria",
+      "display_label": "Email: Non-Personal Score",
+      "group": "confidence-scores-(email-quality)",
+      "sequence": 222
+    },
+    {
+      "column_name": "email_quality_non_generic",
+      "default_selected": false,
+      "description": "Email quality score for non-generic mailbox criteria",
+      "display_label": "Email: Non-Generic Score",
+      "group": "confidence-scores-(email-quality)",
+      "sequence": 223
+    },
+    {
+      "column_name": "email_quality_non_admin",
+      "default_selected": false,
+      "description": "Email quality score for non-admin/helpdesk criteria",
+      "display_label": "Email: Non-Admin Score",
+      "group": "confidence-scores-(email-quality)",
+      "sequence": 224
+    },
+    {
+      "column_name": "email_quality_non_department",
+      "default_selected": false,
+      "description": "Email quality score for non-department criteria",
+      "display_label": "Email: Non-Department Score",
+      "group": "confidence-scores-(email-quality)",
+      "sequence": 225
+    },
+    {
+      "column_name": "email_quality_total",
+      "default_selected": false,
+      "description": "Total email quality score (sum of all criteria)",
+      "display_label": "Email: Total Quality Score",
+      "group": "confidence-scores-(email-quality)",
+      "sequence": 226
+    },
+    {
+      "column_name": "phone_quality_has_10_digits",
+      "default_selected": false,
+      "description": "Phone quality score for 10-digit criteria (calculated on standardized phone)",
+      "display_label": "Phone: Has 10 Digits Score",
+      "group": "confidence-scores-(phone-quality)",
+      "sequence": 231
+    },
+    {
+      "column_name": "phone_quality_not_all_same",
+      "default_selected": false,
+      "description": "Phone quality score for not all same digits criteria (calculated on standardized phone)",
+      "display_label": "Phone: Not All Same Score",
+      "group": "confidence-scores-(phone-quality)",
+      "sequence": 232
+    },
+    {
+      "column_name": "phone_quality_valid_area_code",
+      "default_selected": false,
+      "description": "Phone quality score for valid area code criteria (calculated on standardized phone)",
+      "display_label": "Phone: Valid Area Code Score",
+      "group": "confidence-scores-(phone-quality)",
+      "sequence": 233
+    },
+    {
+      "column_name": "phone_quality_valid_exchange",
+      "default_selected": false,
+      "description": "Phone quality score for valid exchange code criteria (calculated on standardized phone)",
+      "display_label": "Phone: Valid Exchange Score",
+      "group": "confidence-scores-(phone-quality)",
+      "sequence": 234
+    },
+    {
+      "column_name": "phone_quality_valid_line_number",
+      "default_selected": false,
+      "description": "Phone quality score for valid line number criteria (calculated on standardized phone)",
+      "display_label": "Phone: Valid Line Number Score",
+      "group": "confidence-scores-(phone-quality)",
+      "sequence": 235
+    },
+    {
+      "column_name": "phone_quality_not_toll_free",
+      "default_selected": false,
+      "description": "Phone quality score for non-toll-free criteria (calculated on standardized phone)",
+      "display_label": "Phone: Not Toll-Free Score",
+      "group": "confidence-scores-(phone-quality)",
+      "sequence": 236
+    },
+    {
+      "column_name": "phone_quality_not_main_line",
+      "default_selected": false,
+      "description": "Phone quality score for non-main-line criteria (calculated on standardized phone)",
+      "display_label": "Phone: Not Main Line Score",
+      "group": "confidence-scores-(phone-quality)",
+      "sequence": 237
+    },
+    {
+      "column_name": "phone_quality_has_extension",
+      "default_selected": false,
+      "description": "Phone quality score for extension criteria (based on separate PHONE_EXTENSION column)",
+      "display_label": "Phone: Has Extension Score",
+      "group": "confidence-scores-(phone-quality)",
+      "sequence": 238
+    },
+    {
+      "column_name": "phone_quality_high_quality",
+      "default_selected": false,
+      "description": "Phone quality score for high quality indicators criteria (calculated on standardized phone)",
+      "display_label": "Phone: High Quality Score",
+      "group": "confidence-scores-(phone-quality)",
+      "sequence": 239
+    },
+    {
+      "column_name": "phone_quality_total",
+      "default_selected": false,
+      "description": "Total phone quality score (sum of all criteria, calculated on standardized data)",
+      "display_label": "Phone: Total Quality Score",
+      "group": "confidence-scores-(phone-quality)",
+      "sequence": 240
+    }
+  ],
+  "input_fields": [
+    {
+      "column_name": "RECORD_ID",
+      "sequence": 10,
+      "default_selected": true
+    },
+    {
+      "column_name": "SOURCE_TYPE",
+      "sequence": 20,
+      "default_selected": true
+    },
+    {
+      "column_name": "SOURCE_ID",
+      "sequence": 30,
+      "default_selected": true
+    },
+    {
+      "column_name": "COMPANY_NAME",
+      "sequence": 40,
+      "default_selected": true
+    },
+    {
+      "column_name": "NAICS_CD",
+      "sequence": 50,
+      "default_selected": false
+    },
+    {
+      "column_name": "SIC_CODE",
+      "sequence": 60,
+      "default_selected": false
+    }
+  ],
+  "input_fields_address": [
+    {
+      "column_name": "ADDRESS_LINE_1",
+      "sequence": 200,
+      "default_selected": true
+    },
+    {
+      "column_name": "ADDRESS_LINE_2",
+      "sequence": 210,
+      "default_selected": true
+    },
+    {
+      "column_name": "CITY",
+      "sequence": 220,
+      "default_selected": true
+    },
+    {
+      "column_name": "STATE",
+      "sequence": 230,
+      "default_selected": true
+    },
+    {
+      "column_name": "ZIP_CODE",
+      "sequence": 240,
+      "default_selected": true
+    },
+    {
+      "column_name": "ZIP_SUPP",
+      "sequence": 250,
+      "default_selected": true
+    },
+    {
+      "column_name": "COUNTRY_CODE",
+      "sequence": 260,
+      "default_selected": true
+    },
+    {
+      "column_name": "ADDRESS_UPDATE_DT",
+      "sequence": 270,
+      "default_selected": false
+    },
+    {
+      "column_name": "ADDRESS_VALID_IND",
+      "sequence": 280,
+      "default_selected": false
+    },
+    {
+      "column_name": "ADDRESS_LOCATION_TYPE",
+      "sequence": 290,
+      "default_selected": false
+    },
+    {
+      "column_name": "ADDRESS_MARKETABLE_IND",
+      "sequence": 300,
+      "default_selected": false
+    },
+    {
+      "column_name": "ADDRESS_FAULT_CODE",
+      "sequence": 310,
+      "default_selected": false
+    },
+    {
+      "column_name": "RESIDENTIAL_DELIVERY_IND",
+      "sequence": 320,
+      "default_selected": false
+    }
+  ],
+  "input_fields_email_quality": [
+    {
+      "column_name": "EMAIL_ADDRESS",
+      "sequence": 410,
+      "default_selected": true
+    },
+    {
+      "column_name": "EMAIL_VALID_IND",
+      "sequence": 420,
+      "default_selected": false
+    },
+    {
+      "column_name": "EMAIL_MARKETABLE_IND",
+      "sequence": 430,
+      "default_selected": false
+    },
+    {
+      "column_name": "EMAIL_UPDATE_DT",
+      "sequence": 440,
+      "default_selected": false
+    }
+  ],
+  "input_fields_phone_quality": [
+    {
+      "column_name": "PHONE",
+      "sequence": 610,
+      "default_selected": true
+    },
+    {
+      "column_name": "PHONE_TYPE",
+      "sequence": 620,
+      "default_selected": false
+    },
+    {
+      "column_name": "PHONE_EXTENSION",
+      "sequence": 630,
+      "default_selected": false
+    },
+    {
+      "column_name": "PHONE_VALID_IND",
+      "sequence": 640,
+      "default_selected": false
+    },
+    {
+      "column_name": "PHONE_MARKETABLE_IND",
+      "sequence": 650,
+      "default_selected": false
+    },
+    {
+      "column_name": "PHONE_UPDATE_DT",
+      "sequence": 660,
+      "default_selected": false
+    }
+  ],
+  "matching_results": [
+    {
+      "column_name": "DEDUP_KEY",
+      "default_selected": true,
+      "description": "Unique UUID assigned to matched record groups",
+      "display_label": "Dedup Key",
+      "group": "matching-results",
+      "sequence": 1010
+    },
+    {
+      "column_name": "MATCH_TIMESTAMP",
+      "default_selected": false,
+      "description": "Date and time when matching was performed",
+      "display_label": "Match Timestamp",
+      "group": "matching-results",
+      "sequence": 1020
+    },
+    {
+      "column_name": "MATCHING_ENGINE_VERSION",
+      "default_selected": false,
+      "description": "Version of the matching engine used",
+      "display_label": "Matching Engine Version",
+      "group": "matching-results",
+      "sequence": 1030
+    },
+    {
+      "column_name": "MATCH_REASON",
+      "display_label": "Match Reason",
+      "description": "Business rules that caused records to match (e.g., COMPANY_NAME_AND_ADDRESS)",
+      "group": "matching-results",
+      "sequence": 1040,
+      "default_selected": true
+    },
+    {
+      "column_name": "MATCHED_RECORD_IDS",
+      "default_selected": false,
+      "description": "List of all record IDs that matched with this record (separated by |)",
+      "display_label": "Matched Record IDs",
+      "group": "matching-results",
+      "sequence": 1050
+    }
+  ],
+  "similarity_scores": [
+    {
+      "column_name": "company_name_score",
+      "default_selected": false,
+      "sequence": 1110
+    },
+    {
+      "column_name": "address1_score",
+      "default_selected": false,
+      "sequence": 1120
+    },
+    {
+      "column_name": "address2_score",
+      "sequence": 1130
+    }
+  ],
+  "standardized_fields": [
+    {
+      "column_name": "COMPANY_NAME_STD",
+      "default_selected": false,
+      "sequence": 301
+    },
+    {
+      "column_name": "ADDRESS1_STD",
+      "default_selected": false,
+      "sequence": 302
+    },
+    {
+      "column_name": "ADDRESS2_STD",
+      "default_selected": false,
+      "sequence": 303
+    },
+    {
+      "column_name": "EMAIL_STD",
+      "default_selected": false,
+      "sequence": 304
+    },
+    {
+      "column_name": "PHONE_STD",
+      "default_selected": false,
+      "sequence": 305
+    },
+    {
+      "column_name": "PHONE_EXTENSION_STD",
+      "default_selected": false,
+      "sequence": 306
+    }
+  ]
+}

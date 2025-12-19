@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+{% set active_page = 'upload' %}
+
+{% block title %}Map Fields - MatchEng{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="header-row">
+    <div>
+      <h1>Map Fields</h1>
+      <p class="muted">Map source columns to standard fields for matching.</p>
+    </div>
+    <div>
+      <button class="btn-secondary" onclick="autoMap()">Auto-Map</button>
+      <button class="btn-primary" onclick="proceedToProcess()">Continue to Process →</button>
+    </div>
+  </div>
+</div>
+
+<div id="status" class="status" hidden></div>
+
+<div class="card">
+  <h2>Field Mapping</h2>
+  <p class="muted">Map each source column to a standard field. Required fields are marked with *</p>
+  
+  <div id="mappingContainer">
+    <div class="loading">Loading...</div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Data Preview</h2>
+  <div class="table-container">
+    <table id="previewTable" class="data-table">
+      <thead id="previewHead"></thead>
+      <tbody id="previewBody"></tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentFile = null;
+let columnsMetadata = {};
+let fieldMapping = {};
+
+document.addEventListener('DOMContentLoaded', async () => {
+  // Load file from session storage
+  const fileData = sessionStorage.getItem('currentFile');
+  if (!fileData) {
+    window.location.href = '/upload';
+    return;
+  }
+  
+  currentFile = JSON.parse(fileData);
+  
+  // Load columns metadata
+  const response = await fetch('/api/columns');
+  columnsMetadata = await response.json();
+  
+  renderMapping();
+  renderPreview();
+  autoMap();
+  
+  // Set up event delegation for mapping selects (safe from XSS)
+  const mappingContainer = document.getElementById('mappingContainer');
+  if (mappingContainer) {
+    mappingContainer.addEventListener('change', (e) => {
+      if (e.target.classList.contains('mapping-select') && e.target.dataset.sourceColumn) {
+        updateMapping(e.target.dataset.sourceColumn, e.target.value);
+      }
+    });
+  }
+});
+
+function renderMapping() {
+  const container = document.getElementById('mappingContainer');
+  const headers = currentFile.headers || [];
+  
+  // Group standard columns
+  const groups = {};
+  for (const [col, meta] of Object.entries(columnsMetadata)) {
+    const group = meta.group || 'other';
+    if (!groups[group]) groups[group] = [];
+    groups[group].push({ name: col, ...meta });
+  }
+  
+  // Build options
+  let options = '<option value="">-- Not Mapped --</option>';
+  for (const [group, cols] of Object.entries(groups).sort()) {
+    options += `<optgroup label="${formatGroupName(group)}">`;
+    for (const col of cols.sort((a, b) => a.name.localeCompare(b.name))) {
+      const required = col.required ? ' *' : '';
+      options += `<option value="${col.name}">${col.display_label || col.name}${required}</option>`;
+    }
+    options += '</optgroup>';
+  }
+  
+  let html = '<div class="mapping-grid">';
+  
+  for (const header of headers) {
+    html += `
+      <div class="mapping-row">
+        <div class="source-column">
+          <label>Source Column</label>
+          <div class="source-name">${escapeHtml(header)}</div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="target-column">
+          <label>Standard Field</label>
+          <select id="map_${header}" data-source-column="${escapeHtml(header)}" class="mapping-select">
+            ${options}
+          </select>
+        </div>
+        <div class="confidence" id="conf_${header}"></div>
+      </div>
+    `;
+  }
+  
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function formatGroupName(group) {
+  return group.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function updateMapping(sourceCol, targetCol) {
+  if (targetCol) {
+    fieldMapping[sourceCol] = targetCol;
+  } else {
+    delete fieldMapping[sourceCol];
+  }
+}
+
+async function autoMap() {
+  try {
+    const response = await fetch('/api/auto-map', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ headers: currentFile.headers })
+    });
+    
+    const data = await response.json();
+    fieldMapping = data.mapping || {};
+    
+    // Update dropdowns
+    for (const [source, target] of Object.entries(fieldMapping)) {
+      const select = document.getElementById(`map_${source}`);
+      if (select) {
+        select.value = target;
+      }
+      
+      const conf = document.getElementById(`conf_${source}`);
+      if (conf && data.confidence[source]) {
+        conf.innerHTML = `<span class="badge enabled">${data.confidence[source]}%</span>`;
+      }
+    }
+    
+    showToast('Auto-mapping complete', 'success');
+  } catch (error) {
+    showToast('Auto-mapping failed', 'error');
+  }
+}
+
+function renderPreview() {
+  const headers = currentFile.headers || [];
+  const preview = currentFile.preview || [];
+  
+  const thead = document.getElementById('previewHead');
+  thead.innerHTML = '<tr>' + headers.map(h => `<th>${escapeHtml(h)}</th>`).join('') + '</tr>';
+  
+  const tbody = document.getElementById('previewBody');
+  tbody.innerHTML = preview.slice(0, 5).map(row => 
+    '<tr>' + headers.map(h => `<td>${escapeHtml(row[h] || '')}</td>`).join('') + '</tr>'
+  ).join('');
+}
+
+function proceedToProcess() {
+  // Store mapping
+  sessionStorage.setItem('fieldMapping', JSON.stringify(fieldMapping));
+  window.location.href = '/process';
+}
+</script>
+{% endblock %}
+

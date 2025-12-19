@@ -1,430 +1,676 @@
+import csv
 import json
 import os
 import uuid
 from datetime import datetime
 from pathlib import Path
+from typing import Any, Dict
 
-from flask import Flask, jsonify, render_template, request, send_file
-
-from db import ensure_db, insert_record, find_candidates_by_phone, find_candidates_by_keys
-from matching import (
-    compute_keys,
-    normalize_address,
-    normalize_company_name,
-    normalize_phone,
-    pick_best_match,
-)
+from flask import Flask, jsonify, render_template, request, send_file, session
+from werkzeug.utils import secure_filename
 
 
-def load_metadata_config(config_path: Path) -> dict:
-    """Load metadata configuration from JSON file. Returns default config if file doesn't exist."""
-    default_config = {
-        "input_columns": {
-            "SOURCE_TYPE": {
-                "field_type": "Source Fields",
-                "label": "Source Type",
-                "description": "The type of source of the record",
-                "type": "string",
-                "required": True,
-                "active": True,
-                "alternate_names": ["SOURCE_TYPE", "SRC_TYPE"]
-            },
-            "SOURCE_ID": {
-                "field_type": "Source Fields",
-                "label": "Source ID",
-                "description": "The ID of the source of the record",
-                "type": "string",
-                "required": True,
-                "active": True,
-                "alternate_names": ["SOURCE_ID", "SRC_ID"]
-            },
-            "COMPANY_NAME": {
-                "field_type": "Base Fields",
-                "label": "Company Name",
-                "description": "The name of the company",
-                "type": "string",
-                "required": True,
-                "active": True,
-                "alternate_names": ["COMPANY_NAME", "COMP_NAME"]
-            },
-            "ADDRESS": {
-                "field_type": "Address Fields",
-                "label": "Address",
-                "description": "The address of the company",
-                "type": "string",
-                "required": True,
-                "active": True,
-                "alternate_names": ["ADDRESS", "ADDR"]
-            },
-            "PHONE_NUMBER": {
-                "field_type": "Phone Fields",
-                "label": "Phone Number",
-                "description": "The phone number of the company",
-                "type": "string",
-                "required": True,
-                "active": True,
-                "alternate_names": ["PHONE_NUMBER", "PHONE"]
-            }
-        },
-        "output_columns": {
-            "DEDUP_ID": "dedup_id",
-            "MATCH_STATUS": "match_status",
-            "MATCH_SCORE": "match_score",
-            "MATCHED_TO": "matched_to",
-            "ERROR": "error"
-        }
-    }
-    
-    if not config_path.exists():
-        # Create config directory and file with defaults if they don't exist
-        config_path.parent.mkdir(parents=True, exist_ok=True)
-        with config_path.open("w", encoding="utf-8") as f:
-            json.dump(default_config, f, indent=4)
-        return default_config
-    
+def load_json_config(file_path: str) -> Dict[str, Any]:
+    """Load JSON configuration file."""
     try:
-        with config_path.open("r", encoding="utf-8") as f:
-            config = json.load(f)
-            # Ensure input_columns exists
-            if "input_columns" not in config:
-                config["input_columns"] = default_config["input_columns"]
-            # Ensure output_columns exists
-            if "output_columns" not in config:
-                config["output_columns"] = default_config["output_columns"]
-            # Ensure all columns have 'active' field
-            for col_key, col_data in config.get("input_columns", {}).items():
-                if "active" not in col_data:
-                    col_data["active"] = True
-            return config
-    except (json.JSONDecodeError, IOError) as e:
-        # If config file is corrupted, return defaults
-        return default_config
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
 
 
-def get_required_columns_from_config(config: dict) -> list:
-    """Extract required column names from config, considering alternate names."""
-    required = []
-    input_columns = config.get("input_columns", {})
-    
-    for col_key, col_data in input_columns.items():
-        if col_data.get("active", True) and col_data.get("required", False):
-            # Add the label and all alternate names
-            required.append(col_data.get("label", col_key))
-            required.extend(col_data.get("alternate_names", []))
-    
-    return required
-
-
-def find_column_by_header(header: str, config: dict) -> tuple:
-    """Find the column key and data for a given CSV header."""
-    input_columns = config.get("input_columns", {})
-    header_upper = header.upper().strip()
-    
-    for col_key, col_data in input_columns.items():
-        if not col_data.get("active", True):
-            continue
-        
-        # Check if header matches label
-        if col_data.get("label", "").upper() == header_upper:
-            return col_key, col_data
-        
-        # Check if header matches any alternate name
-        for alt_name in col_data.get("alternate_names", []):
-            if alt_name.upper() == header_upper:
-                return col_key, col_data
-    
-    return None, None
+def save_json_config(file_path: str, data: Dict[str, Any]) -> bool:
+    """Save JSON configuration file."""
+    try:
+        Path(file_path).parent.mkdir(parents=True, exist_ok=True)
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=4)
+        return True
+    except Exception:
+        return False
 
 
 def create_app() -> Flask:
     app = Flask(__name__)
+    app.secret_key = os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")
+    
+    # Configuration paths
+    base_dir = Path(__file__).parent
+    config_dir = base_dir / "config"
+    app.config["SETTINGS_PATH"] = str(config_dir / "settings.json")
+    app.config["RULES_PATH"] = str(config_dir / "rules.json")
+    app.config["COLUMNS_METADATA_PATH"] = str(config_dir / "columns_metadata.json")
+    app.config["COLUMN_CONFIG_PATH"] = str(config_dir / "column_config.json")
+    
+    # File paths
+    app.config["UPLOAD_FOLDER"] = str(base_dir / "datafiles" / "incoming")
+    app.config["OUTPUT_FOLDER"] = str(base_dir / "datafiles" / "output")
+    app.config["PROCESS_FOLDER"] = str(base_dir / "datafiles" / "process")
+    app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50MB
+    
+    # Ensure directories exist
+    config_dir.mkdir(parents=True, exist_ok=True)
+    Path(app.config["UPLOAD_FOLDER"]).mkdir(parents=True, exist_ok=True)
+    Path(app.config["OUTPUT_FOLDER"]).mkdir(parents=True, exist_ok=True)
+    Path(app.config["PROCESS_FOLDER"]).mkdir(parents=True, exist_ok=True)
 
-    app.config["MAX_CONTENT_LENGTH"] = int(os.getenv("MAX_CONTENT_LENGTH", str(10 * 1024 * 1024)))
-    app.config["DATA_DIR"] = os.getenv("DATA_DIR", str(Path(__file__).parent / "data"))
-    app.config["OUTPUT_DIR"] = os.getenv("OUTPUT_DIR", str(Path(__file__).parent / "outputs"))
-    app.config["DB_PATH"] = os.getenv(
-        "DB_PATH", str(Path(app.config["DATA_DIR"]) / "matches.db")
-    )
-    app.config["METADATA_CONFIG_PATH"] = os.getenv(
-        "METADATA_CONFIG_PATH", str(Path(__file__).parent / "config" / "metadata_config.json")
-    )
-
-    Path(app.config["DATA_DIR"]).mkdir(parents=True, exist_ok=True)
-    Path(app.config["OUTPUT_DIR"]).mkdir(parents=True, exist_ok=True)
-
-    # Load metadata configuration
-    app.config["METADATA_CONFIG"] = load_metadata_config(Path(app.config["METADATA_CONFIG_PATH"]))
-
-    ensure_db(app.config["DB_PATH"])
-
+    # ==================== Pages ====================
+    
     @app.get("/")
     def index():
         return render_template("index.html")
     
-    @app.get("/config")
-    def config_page():
-        return render_template("config.html")
+    @app.get("/settings")
+    def settings_page():
+        return render_template("settings.html")
     
-    @app.get("/api/config")
-    def get_config():
-        """Get the current metadata configuration."""
-        return jsonify(app.config["METADATA_CONFIG"])
+    @app.get("/rules")
+    def rules_page():
+        return render_template("rules.html")
     
-    @app.post("/api/config")
-    def update_config():
-        """Update the metadata configuration."""
+    @app.get("/columns")
+    def columns_page():
+        return render_template("columns.html")
+    
+    @app.get("/upload")
+    def upload_page():
+        return render_template("upload.html")
+    
+    @app.get("/map_fields")
+    def map_fields_page():
+        return render_template("map_fields.html")
+    
+    @app.get("/process")
+    def process_page():
+        return render_template("process.html")
+    
+    @app.get("/results")
+    def results_page():
+        return render_template("results.html")
+    
+    @app.get("/analytics")
+    def analytics_page():
+        return render_template("analytics.html")
+
+    # ==================== File Upload API ====================
+    
+    @app.post("/api/upload")
+    def upload_file():
+        """Handle file upload."""
+        if "file" not in request.files:
+            return jsonify({"error": "No file provided"}), 400
+        
+        file = request.files["file"]
+        if not file or not file.filename:
+            return jsonify({"error": "No file selected"}), 400
+        
+        filename = secure_filename(file.filename)
+        if not filename.lower().endswith('.csv'):
+            return jsonify({"error": "Only CSV files are supported"}), 400
+        
+        # Generate unique filename
+        file_id = str(uuid.uuid4())[:8]
+        stored_filename = f"{file_id}_{filename}"
+        file_path = Path(app.config["UPLOAD_FOLDER"]) / stored_filename
+        
         try:
-            new_config = request.get_json()
-            if not new_config:
-                return jsonify({"error": "No configuration data provided"}), 400
+            file.save(str(file_path))
             
-            # Validate structure
-            if "input_columns" not in new_config:
-                return jsonify({"error": "Missing 'input_columns' in configuration"}), 400
+            # Read preview
+            preview_rows = []
+            headers = []
+            with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+                reader = csv.DictReader(f)
+                headers = reader.fieldnames or []
+                for i, row in enumerate(reader):
+                    if i >= 10:  # Preview first 10 rows
+                        break
+                    preview_rows.append(dict(row))
             
-            # Save to file
-            config_path = Path(app.config["METADATA_CONFIG_PATH"])
-            with config_path.open("w", encoding="utf-8") as f:
-                json.dump(new_config, f, indent=4)
+            # Count total rows
+            with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+                total_rows = sum(1 for _ in f) - 1  # Subtract header
             
-            # Update in-memory config
-            app.config["METADATA_CONFIG"] = new_config
+            # Store in session
+            session['current_file'] = stored_filename
+            session['file_headers'] = headers
             
-            return jsonify({"ok": True, "message": "Configuration updated successfully"})
+            return jsonify({
+                "ok": True,
+                "file_id": file_id,
+                "filename": filename,
+                "stored_filename": stored_filename,
+                "headers": headers,
+                "preview": preview_rows,
+                "total_rows": total_rows
+            })
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+    
+    @app.get("/api/files")
+    def list_files():
+        """List uploaded files."""
+        upload_dir = Path(app.config["UPLOAD_FOLDER"])
+        files = []
+        
+        for f in upload_dir.glob("*.csv"):
+            stat = f.stat()
+            files.append({
+                "filename": f.name,
+                "size": stat.st_size,
+                "modified": datetime.fromtimestamp(stat.st_mtime).isoformat()
+            })
+        
+        return jsonify(sorted(files, key=lambda x: x['modified'], reverse=True))
+    
+    @app.delete("/api/files/<filename>")
+    def delete_file(filename: str):
+        """Delete an uploaded file."""
+        file_path = Path(app.config["UPLOAD_FOLDER"]) / secure_filename(filename)
+        
+        if file_path.exists():
+            file_path.unlink()
+            return jsonify({"ok": True, "message": "File deleted"})
+        else:
+            return jsonify({"error": "File not found"}), 404
+    
+    @app.get("/api/file-preview/<filename>")
+    def file_preview(filename: str):
+        """Get preview of a file."""
+        file_path = Path(app.config["UPLOAD_FOLDER"]) / secure_filename(filename)
+        
+        if not file_path.exists():
+            return jsonify({"error": "File not found"}), 404
+        
+        try:
+            preview_rows = []
+            headers = []
+            total_rows = 0
+            with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+                reader = csv.DictReader(f)
+                headers = reader.fieldnames or []
+                for i, row in enumerate(reader):
+                    total_rows = i + 1
+                    if i < 100:
+                        preview_rows.append(dict(row))
+            
+            return jsonify({
+                "headers": headers,
+                "preview": preview_rows,
+                "total_rows": total_rows
+            })
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 
-    @app.post("/api/upload")
-    def upload():
-        if "file" not in request.files:
-            return jsonify({"error": "No file field named 'file'"}), 400
-
-        f = request.files["file"]
-        if not f or not f.filename:
-            return jsonify({"error": "No file selected"}), 400
-
-        filename = f.filename.lower()
-        if not filename.endswith(".csv"):
-            return jsonify({"error": "Only .csv uploads are supported"}), 400
-
-        raw = f.stream.read().decode("utf-8", errors="replace")
-        lines = [ln for ln in raw.splitlines() if ln.strip()]
-        if not lines:
-            return jsonify({"error": "Uploaded CSV is empty"}), 400
-
-        import csv
-        from io import StringIO
-
-        reader = csv.DictReader(StringIO("\n".join(lines)))
-        csv_headers = [h.strip() for h in (reader.fieldnames or [])]
-
-        # Validate CSV headers against metadata config
-        config = app.config["METADATA_CONFIG"]
-        input_columns = config.get("input_columns", {})
+    # ==================== File Processing API ====================
+    
+    @app.post("/api/process-file")
+    def process_uploaded_file():
+        """Process an uploaded file: standardize columns and generate analytics."""
+        data = request.get_json()
+        filename = data.get('filename')
         
-        # Find required active columns
-        required_cols = {}
-        for col_key, col_data in input_columns.items():
-            if col_data.get("active", True) and col_data.get("required", False):
-                required_cols[col_key] = col_data
+        if not filename:
+            return jsonify({"error": "No file specified"}), 400
         
-        # Check if all required columns are present (by label or alternate name)
-        missing = []
-        found_mapping = {}
+        input_path = Path(app.config["UPLOAD_FOLDER"]) / secure_filename(filename)
+        if not input_path.exists():
+            return jsonify({"error": "File not found"}), 404
         
-        for col_key, col_data in required_cols.items():
-            label = col_data.get("label", "")
-            alternate_names = col_data.get("alternate_names", [])
+        try:
+            from file_processor import process_file
             
-            # Check if any header matches
-            found = False
-            matched_header = None
-            
-            for header in csv_headers:
-                header_upper = header.upper()
-                if (header_upper == label.upper() or 
-                    header_upper in [alt.upper() for alt in alternate_names]):
-                    found = True
-                    matched_header = header
-                    found_mapping[col_key] = header
-                    break
-            
-            if not found:
-                missing.append({
-                    "column_key": col_key,
-                    "label": label,
-                    "alternate_names": alternate_names
-                })
-        
-        if missing:
-            missing_labels = [m["label"] for m in missing]
-            return (
-                jsonify(
-                    {
-                        "error": "Missing required columns",
-                        "missing": missing_labels,
-                        "missing_details": missing,
-                        "found": csv_headers,
-                    }
-                ),
-                400,
+            result = process_file(
+                input_path=str(input_path),
+                output_dir=app.config["PROCESS_FOLDER"],
+                columns_metadata_path=app.config["COLUMNS_METADATA_PATH"]
             )
-
-        out_rows = []
-        stats = {
-            "processed": 0,
-            "matched_existing": 0,
-            "new_dedup": 0,
-            "errors": 0,
-        }
-
-        # Build mapping from CSV headers to column keys
-        header_to_col_key = {}
-        for col_key, col_data in input_columns.items():
-            if not col_data.get("active", True):
-                continue
-            label = col_data.get("label", "")
-            alternate_names = col_data.get("alternate_names", [])
             
-            for header in csv_headers:
-                header_upper = header.upper()
-                if (header_upper == label.upper() or 
-                    header_upper in [alt.upper() for alt in alternate_names]):
-                    header_to_col_key[header] = col_key
-                    break
+            if "error" in result:
+                return jsonify(result), 500
+            
+            # Store in session
+            session['processed_file'] = result.get('processed_filename')
+            session['analytics_file'] = result.get('analytics_filename')
+            
+            return jsonify(result)
+        except Exception as e:
+            import traceback
+            # Log full traceback server-side for debugging
+            app.logger.error(f"Error processing file: {str(e)}\n{traceback.format_exc()}")
+            # Return safe error message to client (no sensitive information)
+            return jsonify({"error": "Failed to process file. Please check the file format and try again."}), 500
+    
+    @app.get("/api/processed-files")
+    def list_processed_files():
+        """List processed files."""
+        process_dir = Path(app.config["PROCESS_FOLDER"])
+        files = []
         
-        for row in reader:
-            stats["processed"] += 1
-            try:
-                # Extract values using the mapping
-                source_type = ""
-                source_id = ""
-                company_name_raw = ""
-                address_parts = []
-                phone_raw = ""
-                
-                # Find values by matching headers to column keys
-                for header, value in row.items():
-                    col_key = header_to_col_key.get(header)
-                    if col_key == "SOURCE_TYPE":
-                        source_type = (value or "").strip()
-                    elif col_key == "SOURCE_ID":
-                        source_id = (value or "").strip()
-                    elif col_key == "COMPANY_NAME":
-                        company_name_raw = (value or "").strip()
-                    elif col_key and col_key.startswith("ADDRESS"):
-                        # Collect all address fields
-                        val = (value or "").strip()
-                        if val:
-                            address_parts.append(val)
-                    elif col_key == "PHONE_NUMBER":
-                        phone_raw = (value or "").strip()
-                
-                # Combine address parts
-                address_raw = ", ".join(address_parts) if address_parts else ""
-
-                company_name = normalize_company_name(company_name_raw)
-                address = normalize_address(address_raw)
-                phone = normalize_phone(phone_raw)
-
-                name_key, addr_key = compute_keys(company_name, address)
-
-                # 1) Candidate blocking by phone if present.
-                candidates = []
-                if phone:
-                    candidates = find_candidates_by_phone(app.config["DB_PATH"], phone)
-
-                # 2) Fallback blocking by keys.
-                if not candidates:
-                    candidates = find_candidates_by_keys(
-                        app.config["DB_PATH"], name_key=name_key, addr_key=addr_key, limit=500
-                    )
-
-                # 3) Pick best match using fuzzy scoring.
-                match = pick_best_match(
-                    company_name=company_name,
-                    address=address,
-                    phone=phone,
-                    candidates=candidates,
-                )
-
-                if match is None:
-                    dedup_id = str(uuid.uuid4())
-                    match_status = "NEW"
-                    stats["new_dedup"] += 1
-                    match_score = None
-                    matched_to_source = None
-                else:
-                    dedup_id = match["dedup_id"]
-                    match_status = "MATCH"
-                    stats["matched_existing"] += 1
-                    match_score = match["score"]
-                    matched_to_source = f"{match['source_type']}:{match['source_id']}"
-
-                insert_record(
-                    app.config["DB_PATH"],
-                    {
-                        "source_type": source_type,
-                        "source_id": source_id,
-                        "company_name": company_name_raw,
-                        "company_name_norm": company_name,
-                        "address": address_raw,
-                        "address_norm": address,
-                        "phone": phone_raw,
-                        "phone_norm": phone,
-                        "name_key": name_key,
-                        "addr_key": addr_key,
-                        "dedup_id": dedup_id,
-                        "created_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
-                    },
-                )
-
-                out = dict(row)
-                out["DeDup ID"] = dedup_id
-                out["Match Status"] = match_status
-                out["Match Score"] = "" if match_score is None else str(match_score)
-                out["Matched To"] = "" if matched_to_source is None else matched_to_source
-                out_rows.append(out)
-            except Exception as e:
-                stats["errors"] += 1
-                out = dict(row)
-                out["DeDup ID"] = ""
-                out["Match Status"] = "ERROR"
-                out["Match Score"] = ""
-                out["Matched To"] = ""
-                out["Error"] = str(e)
-                out_rows.append(out)
-
-        output_id = str(uuid.uuid4())
-        out_path = Path(app.config["OUTPUT_DIR"]) / f"{output_id}.csv"
-
-        fieldnames = list(reader.fieldnames or [])
-        for extra in ["DeDup ID", "Match Status", "Match Score", "Matched To", "Error"]:
-            if extra not in fieldnames:
-                fieldnames.append(extra)
-
-        import csv
-
-        with out_path.open("w", newline="", encoding="utf-8") as fp:
-            w = csv.DictWriter(fp, fieldnames=fieldnames)
-            w.writeheader()
-            for r in out_rows:
-                w.writerow(r)
-
-        return jsonify(
-            {
-                "ok": True,
-                "stats": stats,
-                "download_url": f"/download/{output_id}",
-            }
+        for f in process_dir.glob("*_processed.csv"):
+            stat = f.stat()
+            # Check for corresponding analytics file
+            analytics_name = f.name.replace("_processed.csv", "_analytics.json")
+            analytics_path = process_dir / analytics_name
+            
+            files.append({
+                "filename": f.name,
+                "size": stat.st_size,
+                "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                "has_analytics": analytics_path.exists(),
+                "analytics_filename": analytics_name if analytics_path.exists() else None
+            })
+        
+        return jsonify(sorted(files, key=lambda x: x['modified'], reverse=True))
+    
+    @app.get("/api/processed-file-preview/<filename>")
+    def processed_file_preview(filename: str):
+        """Get preview of a processed file."""
+        from file_processor import get_processed_file_preview
+        
+        result = get_processed_file_preview(
+            processed_filename=secure_filename(filename),
+            process_dir=app.config["PROCESS_FOLDER"]
         )
+        
+        if "error" in result:
+            return jsonify(result), 404
+        
+        return jsonify(result)
+    
+    @app.get("/api/analytics/<filename>")
+    def get_analytics(filename: str):
+        """Get analytics for a processed file."""
+        from file_processor import load_analytics
+        
+        result = load_analytics(
+            analytics_filename=secure_filename(filename),
+            process_dir=app.config["PROCESS_FOLDER"]
+        )
+        
+        if "error" in result:
+            return jsonify(result), 404
+        
+        return jsonify(result)
+    
+    @app.delete("/api/processed-files/<filename>")
+    def delete_processed_file(filename: str):
+        """Delete a processed file and its analytics."""
+        process_dir = Path(app.config["PROCESS_FOLDER"])
+        # Sanitize filename first to prevent path traversal
+        safe_filename = secure_filename(filename)
+        file_path = process_dir / safe_filename
+        
+        if not file_path.exists():
+            return jsonify({"error": "File not found"}), 404
+        
+        # Delete the processed file
+        file_path.unlink()
+        
+        # Delete corresponding analytics file if exists
+        # Derive analytics name from sanitized filename to prevent path traversal
+        analytics_name = safe_filename.replace("_processed.csv", "_analytics.json")
+        analytics_path = process_dir / analytics_name
+        if analytics_path.exists():
+            analytics_path.unlink()
+        
+        return jsonify({"ok": True, "message": "File deleted"})
 
-    @app.get("/download/<output_id>")
-    def download(output_id: str):
-        out_path = Path(app.config["OUTPUT_DIR"]) / f"{output_id}.csv"
-        if not out_path.exists():
-            return jsonify({"error": "Not found"}), 404
-        return send_file(out_path, as_attachment=True, download_name=f"dedup_results_{output_id}.csv")
+    # ==================== Field Mapping API ====================
+    
+    @app.post("/api/auto-map")
+    def auto_map_fields():
+        """Auto-map source columns to standard columns."""
+        data = request.get_json()
+        source_headers = data.get('headers', [])
+        
+        columns_metadata = load_json_config(app.config["COLUMNS_METADATA_PATH"])
+        
+        mapping = {}
+        confidence = {}
+        
+        for source_col in source_headers:
+            source_upper = source_col.upper().strip()
+            best_match = None
+            best_score = 0
+            
+            for std_col, meta in columns_metadata.items():
+                # Check exact match
+                if source_upper == std_col.upper():
+                    best_match = std_col
+                    best_score = 100
+                    break
+                
+                # Check alternate names
+                alternates = [a.upper() for a in meta.get('alternate_columns', [])]
+                if source_upper in alternates:
+                    best_match = std_col
+                    best_score = 95
+                    break
+                
+                # Check partial match
+                if std_col.upper() in source_upper or source_upper in std_col.upper():
+                    if best_score < 70:
+                        best_match = std_col
+                        best_score = 70
+            
+            if best_match and best_score >= 70:
+                mapping[source_col] = best_match
+                confidence[source_col] = best_score
+        
+        return jsonify({
+            "mapping": mapping,
+            "confidence": confidence
+        })
+
+    # ==================== Processing API ====================
+    
+    @app.post("/api/process")
+    def run_process():
+        """Run the matching process."""
+        data = request.get_json()
+        filename = data.get('filename')
+        field_mapping = data.get('field_mapping', {})
+        output_columns = data.get('output_columns', [])
+        
+        if not filename:
+            return jsonify({"error": "No file specified"}), 400
+        
+        input_path = Path(app.config["UPLOAD_FOLDER"]) / secure_filename(filename)
+        if not input_path.exists():
+            return jsonify({"error": "File not found"}), 404
+        
+        # Generate output filename
+        output_id = str(uuid.uuid4())[:8]
+        output_filename = f"matched_{output_id}.csv"
+        output_path = Path(app.config["OUTPUT_FOLDER"]) / output_filename
+        
+        try:
+            from matching_engine import run_matching
+            
+            stats = run_matching(
+                input_file=str(input_path),
+                output_file=str(output_path),
+                field_mapping=field_mapping,
+                selected_output_columns=output_columns if output_columns else None
+            )
+            
+            stats['output_filename'] = output_filename
+            stats['download_url'] = f"/download/{output_filename}"
+            
+            # Store in session
+            session['last_output'] = output_filename
+            session['last_stats'] = stats
+            
+            return jsonify({"ok": True, "stats": stats})
+        except Exception as e:
+            import traceback
+            # Log full traceback server-side for debugging
+            app.logger.error(f"Error running matching process: {str(e)}\n{traceback.format_exc()}")
+            # Return safe error message to client (no sensitive information)
+            return jsonify({"error": "Failed to process matching. Please check your configuration and try again."}), 500
+    
+    @app.get("/download/<filename>")
+    def download_file(filename: str):
+        """Download output file."""
+        file_path = Path(app.config["OUTPUT_FOLDER"]) / secure_filename(filename)
+        
+        if not file_path.exists():
+            return jsonify({"error": "File not found"}), 404
+        
+        return send_file(
+            str(file_path),
+            as_attachment=True,
+            download_name=filename
+        )
+    
+    @app.get("/api/output-files")
+    def list_output_files():
+        """List output files."""
+        output_dir = Path(app.config["OUTPUT_FOLDER"])
+        files = []
+        
+        for f in output_dir.glob("*.csv"):
+            stat = f.stat()
+            files.append({
+                "filename": f.name,
+                "size": stat.st_size,
+                "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                "download_url": f"/download/{f.name}"
+            })
+        
+        return jsonify(sorted(files, key=lambda x: x['modified'], reverse=True))
+
+    # ==================== Settings API ====================
+    
+    @app.get("/api/settings")
+    def get_settings():
+        """Get all settings."""
+        settings = load_json_config(app.config["SETTINGS_PATH"])
+        return jsonify(settings)
+    
+    @app.post("/api/settings")
+    def update_settings():
+        """Update settings."""
+        try:
+            new_settings = request.get_json()
+            if not new_settings:
+                return jsonify({"error": "No settings data provided"}), 400
+            
+            if save_json_config(app.config["SETTINGS_PATH"], new_settings):
+                return jsonify({"ok": True, "message": "Settings saved successfully"})
+            else:
+                return jsonify({"error": "Failed to save settings"}), 500
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+    
+    @app.patch("/api/settings/<section>")
+    def update_settings_section(section: str):
+        """Update a specific settings section."""
+        try:
+            settings = load_json_config(app.config["SETTINGS_PATH"])
+            section_data = request.get_json()
+            
+            if not section_data:
+                return jsonify({"error": "No data provided"}), 400
+            
+            settings[section] = section_data
+            
+            if save_json_config(app.config["SETTINGS_PATH"], settings):
+                return jsonify({"ok": True, "message": f"Section '{section}' updated"})
+            else:
+                return jsonify({"error": "Failed to save settings"}), 500
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    # ==================== Rules API ====================
+    
+    @app.get("/api/rules")
+    def get_rules():
+        """Get all matching rules."""
+        rules_config = load_json_config(app.config["RULES_PATH"])
+        return jsonify(rules_config)
+    
+    @app.post("/api/rules")
+    def update_rules():
+        """Update all rules."""
+        try:
+            new_rules = request.get_json()
+            if not new_rules:
+                return jsonify({"error": "No rules data provided"}), 400
+            
+            if save_json_config(app.config["RULES_PATH"], new_rules):
+                return jsonify({"ok": True, "message": "Rules saved successfully"})
+            else:
+                return jsonify({"error": "Failed to save rules"}), 500
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+    
+    @app.get("/api/rules/<rule_id>")
+    def get_rule(rule_id: str):
+        """Get a specific rule."""
+        rules_config = load_json_config(app.config["RULES_PATH"])
+        rules = rules_config.get("rules", {})
+        
+        if rule_id in rules:
+            return jsonify(rules[rule_id])
+        else:
+            return jsonify({"error": "Rule not found"}), 404
+    
+    @app.put("/api/rules/<rule_id>")
+    def update_rule(rule_id: str):
+        """Update or create a specific rule."""
+        try:
+            rule_data = request.get_json()
+            if not rule_data:
+                return jsonify({"error": "No rule data provided"}), 400
+            
+            rules_config = load_json_config(app.config["RULES_PATH"])
+            if "rules" not in rules_config:
+                rules_config["rules"] = {}
+            
+            rule_data["id"] = rule_id
+            rules_config["rules"][rule_id] = rule_data
+            
+            if save_json_config(app.config["RULES_PATH"], rules_config):
+                return jsonify({"ok": True, "message": f"Rule '{rule_id}' saved"})
+            else:
+                return jsonify({"error": "Failed to save rule"}), 500
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+    
+    @app.delete("/api/rules/<rule_id>")
+    def delete_rule(rule_id: str):
+        """Delete a specific rule."""
+        try:
+            rules_config = load_json_config(app.config["RULES_PATH"])
+            rules = rules_config.get("rules", {})
+            
+            if rule_id in rules:
+                del rules[rule_id]
+                rules_config["rules"] = rules
+                
+                if save_json_config(app.config["RULES_PATH"], rules_config):
+                    return jsonify({"ok": True, "message": f"Rule '{rule_id}' deleted"})
+                else:
+                    return jsonify({"error": "Failed to save changes"}), 500
+            else:
+                return jsonify({"error": "Rule not found"}), 404
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+    
+    @app.patch("/api/rules/<rule_id>/toggle")
+    def toggle_rule(rule_id: str):
+        """Toggle a rule's enabled status."""
+        try:
+            rules_config = load_json_config(app.config["RULES_PATH"])
+            rules = rules_config.get("rules", {})
+            
+            if rule_id in rules:
+                rules[rule_id]["enabled"] = not rules[rule_id].get("enabled", True)
+                rules_config["rules"] = rules
+                
+                if save_json_config(app.config["RULES_PATH"], rules_config):
+                    status = "enabled" if rules[rule_id]["enabled"] else "disabled"
+                    return jsonify({"ok": True, "message": f"Rule '{rule_id}' {status}", "enabled": rules[rule_id]["enabled"]})
+                else:
+                    return jsonify({"error": "Failed to save changes"}), 500
+            else:
+                return jsonify({"error": "Rule not found"}), 404
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    # ==================== Columns Metadata API ====================
+    
+    @app.get("/api/columns")
+    def get_columns():
+        """Get columns metadata."""
+        columns = load_json_config(app.config["COLUMNS_METADATA_PATH"])
+        return jsonify(columns)
+    
+    @app.post("/api/columns")
+    def update_columns():
+        """Update columns metadata."""
+        try:
+            new_columns = request.get_json()
+            if not new_columns:
+                return jsonify({"error": "No columns data provided"}), 400
+            
+            if save_json_config(app.config["COLUMNS_METADATA_PATH"], new_columns):
+                return jsonify({"ok": True, "message": "Columns metadata saved"})
+            else:
+                return jsonify({"error": "Failed to save columns"}), 500
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+    
+    @app.get("/api/columns/<column_name>")
+    def get_column(column_name: str):
+        """Get a specific column's metadata."""
+        columns = load_json_config(app.config["COLUMNS_METADATA_PATH"])
+        
+        if column_name in columns:
+            return jsonify(columns[column_name])
+        else:
+            return jsonify({"error": "Column not found"}), 404
+    
+    @app.put("/api/columns/<column_name>")
+    def update_column(column_name: str):
+        """Update or create a column's metadata."""
+        try:
+            column_data = request.get_json()
+            if not column_data:
+                return jsonify({"error": "No column data provided"}), 400
+            
+            columns = load_json_config(app.config["COLUMNS_METADATA_PATH"])
+            columns[column_name] = column_data
+            
+            if save_json_config(app.config["COLUMNS_METADATA_PATH"], columns):
+                return jsonify({"ok": True, "message": f"Column '{column_name}' saved"})
+            else:
+                return jsonify({"error": "Failed to save column"}), 500
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+    
+    @app.delete("/api/columns/<column_name>")
+    def delete_column(column_name: str):
+        """Delete a column's metadata."""
+        try:
+            columns = load_json_config(app.config["COLUMNS_METADATA_PATH"])
+            
+            if column_name in columns:
+                del columns[column_name]
+                
+                if save_json_config(app.config["COLUMNS_METADATA_PATH"], columns):
+                    return jsonify({"ok": True, "message": f"Column '{column_name}' deleted"})
+                else:
+                    return jsonify({"error": "Failed to save changes"}), 500
+            else:
+                return jsonify({"error": "Column not found"}), 404
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    # ==================== Column Config API ====================
+    
+    @app.get("/api/column-config")
+    def get_column_config():
+        """Get column configuration (groups and display settings)."""
+        config = load_json_config(app.config["COLUMN_CONFIG_PATH"])
+        return jsonify(config)
+    
+    @app.post("/api/column-config")
+    def update_column_config():
+        """Update column configuration."""
+        try:
+            new_config = request.get_json()
+            if not new_config:
+                return jsonify({"error": "No config data provided"}), 400
+            
+            if save_json_config(app.config["COLUMN_CONFIG_PATH"], new_config):
+                return jsonify({"ok": True, "message": "Column config saved"})
+            else:
+                return jsonify({"error": "Failed to save config"}), 500
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
 
     return app
 
@@ -434,3 +680,4 @@ app = create_app()
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "5000")), debug=True)
+

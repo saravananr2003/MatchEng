@@ -1,0 +1,444 @@
+{% extends "base.html" %}
+{% set active_page = 'upload' %}
+
+{% block title %}Upload File - MatchEng{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Upload File</h1>
+  <p class="muted">Upload a CSV file for deduplication and matching.</p>
+</div>
+
+<div id="status" class="status" hidden></div>
+
+<div class="card">
+  <div class="card-header collapsible-header" onclick="toggleSelectFile()">
+    <h2>Select File</h2>
+    <span id="selectFileToggle" class="toggle-icon">▼</span>
+  </div>
+  <div id="selectFileContent" class="collapsible-content">
+    <div class="upload-zone" id="uploadZone">
+      <div class="upload-icon">📁</div>
+      <p>Drag and drop a CSV file here, or click to select</p>
+      <input type="file" id="fileInput" accept=".csv" hidden />
+      <button class="btn-primary" onclick="document.getElementById('fileInput').click()">Select File</button>
+    </div>
+  </div>
+</div>
+
+<div id="previewSection" class="card" hidden>
+  <div class="card-header">
+    <h2>File Preview</h2>
+    <div>
+      <span id="fileInfo" class="muted"></span>
+      <button class="btn-secondary" onclick="processAndAnalyze()" id="processBtn">Process & Analyze</button>
+      <button class="btn-primary" onclick="proceedToMapping()">Continue to Mapping →</button>
+    </div>
+  </div>
+  
+  <div class="preview-controls">
+    <div class="control-group">
+      <button class="filter-btn" onclick="toggleColumnSelector()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+        </svg>
+        Filter
+        <span id="columnCount" class="filter-badge"></span>
+      </button>
+    </div>
+    <div class="control-group" style="margin-left: auto;">
+      <label for="rowLimit">Rows:</label>
+      <select id="rowLimit" onchange="updatePreview()">
+        <option value="10">10</option>
+        <option value="25">25</option>
+        <option value="50">50</option>
+        <option value="100" selected>100</option>
+        <option value="500">500</option>
+      </select>
+    </div>
+  </div>
+  
+  <div id="columnSelector" class="column-selector" hidden>
+    <div class="column-selector-header">
+      <strong>Select columns to display:</strong>
+      <div>
+        <button class="btn-small" onclick="selectAllColumns(true)">All</button>
+        <button class="btn-small" onclick="selectAllColumns(false)">None</button>
+      </div>
+    </div>
+    <div id="columnCheckboxes" class="column-checkboxes"></div>
+  </div>
+  
+  <div class="table-container resizable" id="tableContainer">
+    <table id="previewTable" class="data-table">
+      <thead id="previewHead"></thead>
+      <tbody id="previewBody"></tbody>
+    </table>
+    <div class="resize-handle" id="resizeHandle"></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header collapsible-header" onclick="toggleFileList()">
+    <h2>Uploaded Files</h2>
+    <div class="header-actions">
+      <button class="btn-secondary" onclick="event.stopPropagation(); loadFileList()">Refresh</button>
+      <span id="fileListToggle" class="toggle-icon">▼</span>
+    </div>
+  </div>
+  <div id="fileList" class="collapsible-content" style="display: none;">
+    <div class="loading">Loading files...</div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentFile = null;
+let selectedColumns = new Set();
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadFileList();
+  setupDragDrop();
+  setupResizeHandle();
+  
+  document.getElementById('fileInput').addEventListener('change', handleFileSelect);
+  
+  // Set up event delegation for column checkboxes (safe from XSS)
+  const columnCheckboxes = document.getElementById('columnCheckboxes');
+  if (columnCheckboxes) {
+    columnCheckboxes.addEventListener('change', (e) => {
+      if (e.target.type === 'checkbox' && e.target.dataset.column) {
+        toggleColumn(e.target.dataset.column);
+      }
+    });
+  }
+  
+  // Set up event delegation for file list buttons (safe from XSS)
+  const fileList = document.getElementById('fileList');
+  if (fileList) {
+    fileList.addEventListener('click', (e) => {
+      if (e.target.classList.contains('btn-select-file') && e.target.dataset.filename) {
+        selectFile(e.target.dataset.filename);
+      } else if (e.target.classList.contains('btn-delete-file') && e.target.dataset.filename) {
+        deleteFile(e.target.dataset.filename);
+      }
+    });
+  }
+});
+
+function setupResizeHandle() {
+  const container = document.getElementById('tableContainer');
+  const handle = document.getElementById('resizeHandle');
+  let startY, startHeight;
+  
+  handle.addEventListener('mousedown', (e) => {
+    startY = e.clientY;
+    startHeight = container.offsetHeight;
+    document.addEventListener('mousemove', resize);
+    document.addEventListener('mouseup', stopResize);
+    e.preventDefault();
+  });
+  
+  function resize(e) {
+    const newHeight = startHeight + (e.clientY - startY);
+    container.style.height = Math.max(200, Math.min(800, newHeight)) + 'px';
+  }
+  
+  function stopResize() {
+    document.removeEventListener('mousemove', resize);
+    document.removeEventListener('mouseup', stopResize);
+  }
+}
+
+function setupDragDrop() {
+  const zone = document.getElementById('uploadZone');
+  
+  zone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    zone.classList.add('dragover');
+  });
+  
+  zone.addEventListener('dragleave', () => {
+    zone.classList.remove('dragover');
+  });
+  
+  zone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    zone.classList.remove('dragover');
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      uploadFile(files[0]);
+    }
+  });
+}
+
+function handleFileSelect(e) {
+  const file = e.target.files[0];
+  if (file) {
+    uploadFile(file);
+  }
+}
+
+async function uploadFile(file) {
+  if (!file.name.toLowerCase().endsWith('.csv')) {
+    showToast('Only CSV files are supported', 'error');
+    return;
+  }
+  
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  setStatus('status', 'Uploading file...', 'info');
+  
+  try {
+    const response = await fetch('/api/upload', {
+      method: 'POST',
+      body: formData
+    });
+    
+    const data = await response.json();
+    
+    if (data.ok) {
+      currentFile = data;
+      showPreview(data);
+      loadFileList();
+      setStatus('status', `File uploaded: ${data.total_rows} rows`, 'success');
+    } else {
+      setStatus('status', data.error || 'Upload failed', 'error');
+    }
+  } catch (error) {
+    setStatus('status', 'Upload failed: ' + error.message, 'error');
+  }
+}
+
+function showPreview(data) {
+  document.getElementById('previewSection').hidden = false;
+  document.getElementById('fileInfo').textContent = `${data.filename} - ${data.total_rows} rows`;
+  
+  // Initialize selected columns (all by default)
+  selectedColumns = new Set(data.headers);
+  
+  // Build column selector checkboxes
+  buildColumnSelector(data.headers);
+  
+  // Render the table
+  renderPreviewTable();
+}
+
+function buildColumnSelector(headers) {
+  const container = document.getElementById('columnCheckboxes');
+  container.innerHTML = headers.map(h => `
+    <label>
+      <input type="checkbox" value="${escapeHtml(h)}" data-column="${escapeHtml(h)}" checked>
+      ${escapeHtml(h)}
+    </label>
+  `).join('');
+  updateColumnCount();
+}
+
+function toggleColumnSelector() {
+  const selector = document.getElementById('columnSelector');
+  selector.hidden = !selector.hidden;
+}
+
+function toggleColumn(col) {
+  if (selectedColumns.has(col)) {
+    selectedColumns.delete(col);
+  } else {
+    selectedColumns.add(col);
+  }
+  updateColumnCount();
+  renderPreviewTable();
+}
+
+function selectAllColumns(selectAll) {
+  const checkboxes = document.querySelectorAll('#columnCheckboxes input[type="checkbox"]');
+  checkboxes.forEach(cb => {
+    cb.checked = selectAll;
+    if (selectAll) {
+      selectedColumns.add(cb.value);
+    } else {
+      selectedColumns.delete(cb.value);
+    }
+  });
+  updateColumnCount();
+  renderPreviewTable();
+}
+
+function updateColumnCount() {
+  const total = currentFile?.headers?.length || 0;
+  document.getElementById('columnCount').textContent = `${selectedColumns.size}/${total}`;
+}
+
+function updatePreview() {
+  renderPreviewTable();
+}
+
+function renderPreviewTable() {
+  if (!currentFile) return;
+  
+  const rowLimit = parseInt(document.getElementById('rowLimit').value);
+  const headers = currentFile.headers.filter(h => selectedColumns.has(h));
+  const rows = currentFile.preview.slice(0, rowLimit);
+  
+  // Build table header
+  const thead = document.getElementById('previewHead');
+  thead.innerHTML = '<tr>' + headers.map(h => `<th>${escapeHtml(h)}</th>`).join('') + '</tr>';
+  
+  // Build table body
+  const tbody = document.getElementById('previewBody');
+  tbody.innerHTML = rows.map(row => 
+    '<tr>' + headers.map(h => `<td>${escapeHtml(row[h] || '')}</td>`).join('') + '</tr>'
+  ).join('');
+}
+
+function proceedToMapping() {
+  if (currentFile) {
+    sessionStorage.setItem('currentFile', JSON.stringify(currentFile));
+    window.location.href = '/map_fields';
+  }
+}
+
+async function loadFileList() {
+  try {
+    const response = await fetch('/api/files');
+    const files = await response.json();
+    
+    const container = document.getElementById('fileList');
+    
+    if (files.length === 0) {
+      container.innerHTML = '<p class="muted">No files uploaded yet.</p>';
+      return;
+    }
+    
+    container.innerHTML = files.map(f => `
+      <div class="file-item">
+        <div class="file-info">
+          <span class="file-name">${escapeHtml(f.filename)}</span>
+          <span class="file-meta">${formatSize(f.size)} • ${formatDate(f.modified)}</span>
+        </div>
+        <div class="file-actions">
+          <button class="btn-secondary btn-small btn-select-file" data-filename="${escapeHtml(f.filename)}">Select</button>
+          <button class="btn-danger btn-small btn-delete-file" data-filename="${escapeHtml(f.filename)}">Delete</button>
+        </div>
+      </div>
+    `).join('');
+  } catch (error) {
+    document.getElementById('fileList').innerHTML = '<p class="muted">Failed to load files.</p>';
+  }
+}
+
+async function selectFile(filename) {
+  try {
+    const response = await fetch(`/api/file-preview/${filename}`);
+    const data = await response.json();
+    
+    if (data.error) {
+      showToast(data.error, 'error');
+      return;
+    }
+    
+    currentFile = {
+      stored_filename: filename,
+      filename: filename,
+      headers: data.headers,
+      preview: data.preview,
+      total_rows: data.total_rows || data.preview.length
+    };
+    
+    showPreview(currentFile);
+  } catch (error) {
+    showToast('Failed to load file', 'error');
+  }
+}
+
+async function deleteFile(filename) {
+  if (!confirm(`Delete ${filename}?`)) return;
+  
+  try {
+    const response = await fetch(`/api/files/${filename}`, { method: 'DELETE' });
+    const data = await response.json();
+    
+    if (data.ok) {
+      showToast('File deleted', 'success');
+      loadFileList();
+    } else {
+      showToast(data.error || 'Delete failed', 'error');
+    }
+  } catch (error) {
+    showToast('Delete failed', 'error');
+  }
+}
+
+function formatSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function formatDate(isoString) {
+  return new Date(isoString).toLocaleString();
+}
+
+function toggleSelectFile() {
+  const selectFileContent = document.getElementById('selectFileContent');
+  const toggle = document.getElementById('selectFileToggle');
+  const isHidden = selectFileContent.style.display === 'none';
+  
+  selectFileContent.style.display = isHidden ? 'block' : 'none';
+  toggle.textContent = isHidden ? '▲' : '▼';
+}
+
+function toggleFileList() {
+  const fileList = document.getElementById('fileList');
+  const toggle = document.getElementById('fileListToggle');
+  const isHidden = fileList.style.display === 'none';
+  
+  fileList.style.display = isHidden ? 'block' : 'none';
+  toggle.textContent = isHidden ? '▲' : '▼';
+  
+  // Load files if showing for the first time
+  if (isHidden && fileList.innerHTML.includes('Loading')) {
+    loadFileList();
+  }
+}
+
+async function processAndAnalyze() {
+  if (!currentFile) {
+    showToast('No file selected', 'error');
+    return;
+  }
+  
+  const btn = document.getElementById('processBtn');
+  btn.disabled = true;
+  btn.textContent = 'Processing...';
+  
+  try {
+    const response = await fetch('/api/process-file', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename: currentFile.stored_filename || currentFile.filename })
+    });
+    
+    const data = await response.json();
+    
+    if (data.ok) {
+      showToast('File processed successfully!', 'success');
+      // Redirect to analytics page
+      window.location.href = '/analytics';
+    } else {
+      showToast(data.error || 'Processing failed', 'error');
+      btn.disabled = false;
+      btn.textContent = 'Process & Analyze';
+    }
+  } catch (error) {
+    showToast('Processing failed: ' + error.message, 'error');
+    btn.disabled = false;
+    btn.textContent = 'Process & Analyze';
+  }
+}
+</script>
+{% endblock %}
+

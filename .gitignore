@@ -4,3 +4,9 @@ __pycache__/
 .env
 /data/*.db
 /outputs/*.csv
+.idea/
+# Quality metadata database (auto-generated, can be recreated from JSON)
+config/quality_metadata.db
+/datafiles/incoming/*
+/datafiles/output/*
+/datafiles/process/*
