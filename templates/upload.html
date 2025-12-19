@@ -31,11 +31,45 @@
     </div>
   </div>
   
-  <div class="table-container">
+  <div class="preview-controls">
+    <div class="control-group">
+      <label for="rowLimit">Rows to show:</label>
+      <select id="rowLimit" onchange="updatePreview()">
+        <option value="10">10</option>
+        <option value="25">25</option>
+        <option value="50">50</option>
+        <option value="100" selected>100</option>
+        <option value="500">500</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <button class="filter-btn" onclick="toggleColumnSelector()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+        </svg>
+        Filter Columns
+        <span id="columnCount" class="filter-badge"></span>
+      </button>
+    </div>
+  </div>
+  
+  <div id="columnSelector" class="column-selector" hidden>
+    <div class="column-selector-header">
+      <strong>Select columns to display:</strong>
+      <div>
+        <button class="btn-small" onclick="selectAllColumns(true)">All</button>
+        <button class="btn-small" onclick="selectAllColumns(false)">None</button>
+      </div>
+    </div>
+    <div id="columnCheckboxes" class="column-checkboxes"></div>
+  </div>
+  
+  <div class="table-container resizable" id="tableContainer">
     <table id="previewTable" class="data-table">
       <thead id="previewHead"></thead>
       <tbody id="previewBody"></tbody>
     </table>
+    <div class="resize-handle" id="resizeHandle"></div>
   </div>
 </div>
 
@@ -50,16 +84,191 @@
 </div>
 {% endblock %}
 
+{% block extra_css %}
+<style>
+.preview-controls {
+  display: flex;
+  gap: 2rem;
+  padding: 1rem;
+  background: var(--bg-secondary, #f5f5f5);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.control-group label {
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.control-group select {
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--card-bg, #fff);
+  color: var(--text);
+}
+
+.column-selector {
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.column-selector-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.column-checkboxes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.5rem;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.column-checkboxes label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.column-checkboxes label:hover {
+  background: var(--bg-secondary, #f5f5f5);
+}
+
+.table-container.resizable {
+  position: relative;
+  min-height: 200px;
+  max-height: 600px;
+  overflow: auto;
+  resize: vertical;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.resize-handle {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background: linear-gradient(to bottom, transparent, var(--border));
+  cursor: ns-resize;
+}
+
+.data-table th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-secondary, #f5f5f5);
+  z-index: 1;
+  resize: horizontal;
+  overflow: hidden;
+  min-width: 80px;
+}
+
+.upload-zone {
+  padding: 1.5rem !important;
+}
+
+.upload-zone .upload-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.upload-zone p {
+  margin: 0.5rem 0;
+}
+
+.filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(99, 102, 241, 0.3);
+}
+
+.filter-btn:hover {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(99, 102, 241, 0.4);
+}
+
+.filter-btn svg {
+  flex-shrink: 0;
+}
+
+.filter-badge {
+  background: rgba(255, 255, 255, 0.25);
+  padding: 0.15rem 0.5rem;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+</style>
+{% endblock %}
+
 {% block extra_js %}
 <script>
 let currentFile = null;
+let selectedColumns = new Set();
 
 document.addEventListener('DOMContentLoaded', () => {
   loadFileList();
   setupDragDrop();
+  setupResizeHandle();
   
   document.getElementById('fileInput').addEventListener('change', handleFileSelect);
 });
+
+function setupResizeHandle() {
+  const container = document.getElementById('tableContainer');
+  const handle = document.getElementById('resizeHandle');
+  let startY, startHeight;
+  
+  handle.addEventListener('mousedown', (e) => {
+    startY = e.clientY;
+    startHeight = container.offsetHeight;
+    document.addEventListener('mousemove', resize);
+    document.addEventListener('mouseup', stopResize);
+    e.preventDefault();
+  });
+  
+  function resize(e) {
+    const newHeight = startHeight + (e.clientY - startY);
+    container.style.height = Math.max(200, Math.min(800, newHeight)) + 'px';
+  }
+  
+  function stopResize() {
+    document.removeEventListener('mousemove', resize);
+    document.removeEventListener('mouseup', stopResize);
+  }
+}
 
 function setupDragDrop() {
   const zone = document.getElementById('uploadZone');
@@ -127,14 +336,80 @@ function showPreview(data) {
   document.getElementById('previewSection').hidden = false;
   document.getElementById('fileInfo').textContent = `${data.filename} - ${data.total_rows} rows`;
   
+  // Initialize selected columns (all by default)
+  selectedColumns = new Set(data.headers);
+  
+  // Build column selector checkboxes
+  buildColumnSelector(data.headers);
+  
+  // Render the table
+  renderPreviewTable();
+}
+
+function buildColumnSelector(headers) {
+  const container = document.getElementById('columnCheckboxes');
+  container.innerHTML = headers.map(h => `
+    <label>
+      <input type="checkbox" value="${escapeHtml(h)}" checked onchange="toggleColumn('${escapeHtml(h)}')">
+      ${escapeHtml(h)}
+    </label>
+  `).join('');
+  updateColumnCount();
+}
+
+function toggleColumnSelector() {
+  const selector = document.getElementById('columnSelector');
+  selector.hidden = !selector.hidden;
+}
+
+function toggleColumn(col) {
+  if (selectedColumns.has(col)) {
+    selectedColumns.delete(col);
+  } else {
+    selectedColumns.add(col);
+  }
+  updateColumnCount();
+  renderPreviewTable();
+}
+
+function selectAllColumns(selectAll) {
+  const checkboxes = document.querySelectorAll('#columnCheckboxes input[type="checkbox"]');
+  checkboxes.forEach(cb => {
+    cb.checked = selectAll;
+    if (selectAll) {
+      selectedColumns.add(cb.value);
+    } else {
+      selectedColumns.delete(cb.value);
+    }
+  });
+  updateColumnCount();
+  renderPreviewTable();
+}
+
+function updateColumnCount() {
+  const total = currentFile?.headers?.length || 0;
+  document.getElementById('columnCount').textContent = `${selectedColumns.size}/${total}`;
+}
+
+function updatePreview() {
+  renderPreviewTable();
+}
+
+function renderPreviewTable() {
+  if (!currentFile) return;
+  
+  const rowLimit = parseInt(document.getElementById('rowLimit').value);
+  const headers = currentFile.headers.filter(h => selectedColumns.has(h));
+  const rows = currentFile.preview.slice(0, rowLimit);
+  
   // Build table header
   const thead = document.getElementById('previewHead');
-  thead.innerHTML = '<tr>' + data.headers.map(h => `<th>${escapeHtml(h)}</th>`).join('') + '</tr>';
+  thead.innerHTML = '<tr>' + headers.map(h => `<th>${escapeHtml(h)}</th>`).join('') + '</tr>';
   
   // Build table body
   const tbody = document.getElementById('previewBody');
-  tbody.innerHTML = data.preview.map(row => 
-    '<tr>' + data.headers.map(h => `<td>${escapeHtml(row[h] || '')}</td>`).join('') + '</tr>'
+  tbody.innerHTML = rows.map(row => 
+    '<tr>' + headers.map(h => `<td>${escapeHtml(row[h] || '')}</td>`).join('') + '</tr>'
   ).join('');
 }
 
