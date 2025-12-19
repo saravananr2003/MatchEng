@@ -11,7 +11,7 @@ import uuid
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List
 
 
 def load_columns_metadata(config_path: str = "config/columns_metadata.json") -> Dict[str, Any]:
