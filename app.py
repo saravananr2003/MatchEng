@@ -55,11 +55,11 @@ def create_app() -> Flask:
     Path(app.config["PROCESS_FOLDER"]).mkdir(parents=True, exist_ok=True)
 
     # ==================== Pages ====================
-    
+
     @app.get("/")
     def index():
         return render_template("index.html")
-    
+
     @app.get("/settings")
     def settings_page():
         return render_template("settings.html")
@@ -93,17 +93,17 @@ def create_app() -> Flask:
         return render_template("analytics.html")
 
     # ==================== File Upload API ====================
-    
+
     @app.post("/api/upload")
     def upload_file():
         """Handle file upload."""
         if "file" not in request.files:
             return jsonify({"error": "No file provided"}), 400
-        
+
         file = request.files["file"]
         if not file or not file.filename:
             return jsonify({"error": "No file selected"}), 400
-        
+
         filename = secure_filename(file.filename)
         if not filename.lower().endswith('.csv'):
             return jsonify({"error": "Only CSV files are supported"}), 400
@@ -207,15 +207,21 @@ def create_app() -> Flask:
     @app.post("/api/process-file")
     def process_uploaded_file():
         """Process an uploaded file: standardize columns and generate analytics."""
-        data = request.get_json()
-        filename = data.get('filename')
-        
-        if not filename:
-            return jsonify({"error": "No file specified"}), 400
-        
-        input_path = Path(app.config["UPLOAD_FOLDER"]) / secure_filename(filename)
-        if not input_path.exists():
-            return jsonify({"error": "File not found"}), 404
+        try:
+            data = request.get_json()
+            if data is None:
+                return jsonify({"error": "Invalid JSON or missing Content-Type header"}), 400
+            
+            filename = data.get('filename')
+            
+            if not filename:
+                return jsonify({"error": "No file specified"}), 400
+            
+            input_path = Path(app.config["UPLOAD_FOLDER"]) / secure_filename(filename)
+            if not input_path.exists():
+                return jsonify({"error": "File not found"}), 404
+        except Exception:
+            return jsonify({"error": "Invalid request format"}), 400
         
         try:
             from file_processor import process_file
@@ -266,10 +272,15 @@ def create_app() -> Flask:
     @app.get("/api/processed-file-preview/<filename>")
     def processed_file_preview(filename: str):
         """Get preview of a processed file."""
+        # Validate filename format
+        safe_filename = secure_filename(filename)
+        if not safe_filename.endswith('_processed.csv'):
+            return jsonify({"error": "Invalid file format. Expected filename ending with '_processed.csv'"}), 400
+        
         from file_processor import get_processed_file_preview
         
         result = get_processed_file_preview(
-            processed_filename=secure_filename(filename),
+            processed_filename=safe_filename,
             process_dir=app.config["PROCESS_FOLDER"]
         )
         
@@ -281,10 +292,15 @@ def create_app() -> Flask:
     @app.get("/api/analytics/<filename>")
     def get_analytics(filename: str):
         """Get analytics for a processed file."""
+        # Validate filename format
+        safe_filename = secure_filename(filename)
+        if not safe_filename.endswith('_analytics.json'):
+            return jsonify({"error": "Invalid file format. Expected filename ending with '_analytics.json'"}), 400
+        
         from file_processor import load_analytics
         
         result = load_analytics(
-            analytics_filename=secure_filename(filename),
+            analytics_filename=safe_filename,
             process_dir=app.config["PROCESS_FOLDER"]
         )
         
@@ -296,9 +312,12 @@ def create_app() -> Flask:
     @app.delete("/api/processed-files/<filename>")
     def delete_processed_file(filename: str):
         """Delete a processed file and its analytics."""
-        process_dir = Path(app.config["PROCESS_FOLDER"])
-        # Sanitize filename first to prevent path traversal
+        # Validate filename format
         safe_filename = secure_filename(filename)
+        if not safe_filename.endswith('_processed.csv'):
+            return jsonify({"error": "Invalid file format. Expected filename ending with '_processed.csv'"}), 400
+        
+        process_dir = Path(app.config["PROCESS_FOLDER"])
         file_path = process_dir / safe_filename
         
         if not file_path.exists():
@@ -368,47 +387,70 @@ def create_app() -> Flask:
     @app.post("/api/process")
     def run_process():
         """Run the matching process."""
-        data = request.get_json()
-        filename = data.get('filename')
-        field_mapping = data.get('field_mapping', {})
-        output_columns = data.get('output_columns', [])
-        
-        if not filename:
-            return jsonify({"error": "No file specified"}), 400
-        
-        input_path = Path(app.config["UPLOAD_FOLDER"]) / secure_filename(filename)
-        if not input_path.exists():
-            return jsonify({"error": "File not found"}), 404
-        
-        # Generate output filename
-        output_id = str(uuid.uuid4())[:8]
-        output_filename = f"matched_{output_id}.csv"
-        output_path = Path(app.config["OUTPUT_FOLDER"]) / output_filename
-        
         try:
-            from matching_engine import run_matching
+            data = request.get_json()
+            if data is None:
+                return jsonify({"error": "Invalid JSON or missing Content-Type header"}), 400
             
-            stats = run_matching(
-                input_file=str(input_path),
-                output_file=str(output_path),
-                field_mapping=field_mapping,
-                selected_output_columns=output_columns if output_columns else None
-            )
+            # Check if this is a processed file from analytics
+            processed_filename = data.get('processed_filename')
+            if processed_filename:
+                # Validate filename format
+                safe_filename = secure_filename(processed_filename)
+                if not safe_filename.endswith('_processed.csv'):
+                    return jsonify({"error": "Invalid file format. Expected filename ending with '_processed.csv'"}), 400
+                
+                input_path = Path(app.config["PROCESS_FOLDER"]) / safe_filename
+                if not input_path.exists():
+                    return jsonify({"error": "Processed file not found"}), 404
+                
+                # No field mapping needed for processed files (already standardized)
+                field_mapping = None
+            else:
+                # Legacy upload flow
+                filename = data.get('filename')
+                if not filename:
+                    return jsonify({"error": "No file specified"}), 400
+                
+                input_path = Path(app.config["UPLOAD_FOLDER"]) / secure_filename(filename)
+                if not input_path.exists():
+                    return jsonify({"error": "File not found"}), 404
+                
+                field_mapping = data.get('field_mapping', {})
             
-            stats['output_filename'] = output_filename
-            stats['download_url'] = f"/download/{output_filename}"
+            output_columns = data.get('output_columns', [])
             
-            # Store in session
-            session['last_output'] = output_filename
-            session['last_stats'] = stats
+            # Generate output filename
+            output_id = str(uuid.uuid4())[:8]
+            output_filename = f"matched_{output_id}.csv"
+            output_path = Path(app.config["OUTPUT_FOLDER"]) / output_filename
             
-            return jsonify({"ok": True, "stats": stats})
-        except Exception as e:
-            import traceback
-            # Log full traceback server-side for debugging
-            app.logger.error(f"Error running matching process: {str(e)}\n{traceback.format_exc()}")
-            # Return safe error message to client (no sensitive information)
-            return jsonify({"error": "Failed to process matching. Please check your configuration and try again."}), 500
+            try:
+                from matching_engine import run_matching
+                
+                stats = run_matching(
+                    input_file=str(input_path),
+                    output_file=str(output_path),
+                    field_mapping=field_mapping,
+                    selected_output_columns=output_columns if output_columns else None
+                )
+                
+                stats['output_filename'] = output_filename
+                stats['download_url'] = f"/download/{output_filename}"
+                
+                # Store in session
+                session['last_output'] = output_filename
+                session['last_stats'] = stats
+                
+                return jsonify({"ok": True, "stats": stats})
+            except Exception as e:
+                import traceback
+                # Log full traceback server-side for debugging
+                app.logger.error(f"Error running matching process: {str(e)}\n{traceback.format_exc()}")
+                # Return safe error message to client (no sensitive information)
+                return jsonify({"error": "Failed to process matching. Please check your configuration and try again."}), 500
+        except Exception:
+            return jsonify({"error": "Invalid request format"}), 400
     
     @app.get("/download/<filename>")
     def download_file(filename: str):

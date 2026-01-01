@@ -62,27 +62,68 @@ let fieldMapping = {};
 let selectedColumns = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // Load from session
-  const fileData = sessionStorage.getItem('currentFile');
-  const mappingData = sessionStorage.getItem('fieldMapping');
+  // Check for processed file from analytics first
+  const processedFileData = sessionStorage.getItem('currentProcessedFile');
   
-  if (fileData) {
-    currentFile = JSON.parse(fileData);
-    document.getElementById('fileInfo').innerHTML = `
-      <div class="file-summary-item">
-        <strong>File:</strong> ${escapeHtml(currentFile.filename || currentFile.stored_filename)}
-      </div>
-      <div class="file-summary-item">
-        <strong>Rows:</strong> ${currentFile.total_rows || 'Unknown'}
-      </div>
-      <div class="file-summary-item">
-        <strong>Columns:</strong> ${(currentFile.headers || []).length}
-      </div>
-    `;
-  }
-  
-  if (mappingData) {
-    fieldMapping = JSON.parse(mappingData);
+  if (processedFileData) {
+    const processedFile = JSON.parse(processedFileData);
+    currentFile = {
+      processed_filename: processedFile.processed_filename,
+      analytics_filename: processedFile.analytics_filename,
+      source: processedFile.source || 'analytics'
+    };
+    
+    // Load file info from processed file
+    try {
+      const response = await fetch(`/api/processed-file-preview/${processedFile.processed_filename}`);
+      const preview = await response.json();
+      
+      if (preview.error) {
+        throw new Error(preview.error);
+      }
+      
+      document.getElementById('fileInfo').innerHTML = `
+        <div class="file-summary-item">
+          <strong>File:</strong> ${escapeHtml(processedFile.processed_filename)}
+        </div>
+        <div class="file-summary-item">
+          <strong>Rows:</strong> ${preview.total_rows || 'Unknown'}
+        </div>
+        <div class="file-summary-item">
+          <strong>Columns:</strong> ${(preview.headers || []).length}
+        </div>
+        <div class="file-summary-item">
+          <strong>Source:</strong> Processed file (from Analytics)
+        </div>
+      `;
+    } catch (error) {
+      document.getElementById('fileInfo').innerHTML = `
+        <p class="muted">Error loading file info: ${escapeHtml(error.message)}</p>
+      `;
+    }
+  } else {
+    // Load from session (legacy upload flow)
+    const fileData = sessionStorage.getItem('currentFile');
+    const mappingData = sessionStorage.getItem('fieldMapping');
+    
+    if (fileData) {
+      currentFile = JSON.parse(fileData);
+      document.getElementById('fileInfo').innerHTML = `
+        <div class="file-summary-item">
+          <strong>File:</strong> ${escapeHtml(currentFile.filename || currentFile.stored_filename)}
+        </div>
+        <div class="file-summary-item">
+          <strong>Rows:</strong> ${currentFile.total_rows || 'Unknown'}
+        </div>
+        <div class="file-summary-item">
+          <strong>Columns:</strong> ${(currentFile.headers || []).length}
+        </div>
+      `;
+    }
+    
+    if (mappingData) {
+      fieldMapping = JSON.parse(mappingData);
+    }
   }
   
   await loadOutputColumns();
@@ -206,14 +247,27 @@ async function runProcess() {
   document.getElementById('resultsSection').hidden = true;
   
   try {
-    const response = await fetch('/api/process', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    let requestBody;
+    
+    // Check if this is a processed file from analytics
+    if (currentFile.processed_filename) {
+      requestBody = {
+        processed_filename: currentFile.processed_filename,
+        output_columns: selectedColumns
+      };
+    } else {
+      // Legacy upload flow
+      requestBody = {
         filename: currentFile.stored_filename || currentFile.filename,
         field_mapping: fieldMapping,
         output_columns: selectedColumns
-      })
+      };
+    }
+    
+    const response = await fetch('/api/process', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody)
     });
     
     const data = await response.json();

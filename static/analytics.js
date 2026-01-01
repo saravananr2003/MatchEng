@@ -51,17 +51,17 @@ async function loadAnalytics() {
     const analytics = await response.json();
     
     if (analytics.error) {
-      container.innerHTML = `<div class="no-data"><h3>Error</h3><p>${analytics.error}</p></div>`;
+      container.innerHTML = `<div class="no-data"><h3>Error</h3><p>${escapeHtml(analytics.error)}</p></div>`;
       return;
     }
     
-    renderAnalytics(analytics, container);
+    renderAnalytics(analytics, container, filename);
   } catch (error) {
-    container.innerHTML = `<div class="no-data"><h3>Error</h3><p>Failed to load analytics.</p></div>`;
+    container.innerHTML = `<div class="no-data"><h3>Error</h3><p>Failed to load analytics: ${escapeHtml(error.message)}</p></div>`;
   }
 }
 
-function renderAnalytics(analytics, container) {
+function renderAnalytics(analytics, container, analyticsFilename) {
   const { summary, data_quality, column_completeness, field_analytics, duplicates, value_distributions } = analytics;
   
   let html = '';
@@ -271,6 +271,28 @@ function renderAnalytics(analytics, container) {
     </div>
   `;
   
+  // Action buttons - Continue to Matching
+  if (analyticsFilename) {
+    const processedFilename = getProcessedFilenameFromAnalytics(analyticsFilename);
+    if (processedFilename) {
+      html += `
+        <div class="card action-card" style="margin-top: 2rem;">
+          <div class="action-card-content">
+            <div>
+              <h3 style="margin: 0 0 0.5rem 0;">Ready for Matching</h3>
+              <p class="muted" style="margin: 0;">Run the matching engine on this processed file to identify duplicates and generate deduplication keys.</p>
+            </div>
+            <div class="action-card-actions">
+              <button class="btn-primary btn-large" onclick="continueToMatching('${escapeHtml(processedFilename)}', '${escapeHtml(analyticsFilename)}')">
+                ⚡ Run Matching Engine
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+  }
+  
   container.innerHTML = html;
 }
 
@@ -316,5 +338,28 @@ function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text || '';
   return div.innerHTML;
+}
+
+function getProcessedFilenameFromAnalytics(analyticsFilename) {
+  // Convert analytics filename to processed filename
+  // e.g., "file_analytics.json" -> "file_processed.csv"
+  if (analyticsFilename && analyticsFilename.endsWith('_analytics.json')) {
+    return analyticsFilename.replace('_analytics.json', '_processed.csv');
+  }
+  return null;
+}
+
+function continueToMatching(processedFilename, analyticsFilename) {
+  // Store file info for the process page
+  const fileInfo = {
+    processed_filename: processedFilename,
+    analytics_filename: analyticsFilename,
+    source: 'analytics'
+  };
+  
+  sessionStorage.setItem('currentProcessedFile', JSON.stringify(fileInfo));
+  
+  // Navigate to process page
+  window.location.href = '/process';
 }
 
