@@ -25,22 +25,30 @@ from quality_scorer import (
 )
 
 
+# Lazy import for performance
+_config_manager = None
+
+
+def _get_config_manager():
+    """Lazy load config manager."""
+    global _config_manager
+    if _config_manager is None:
+        from core.config_manager import get_config_manager
+        _config_manager = get_config_manager()
+    return _config_manager
+
+
 def load_rules(rules_path: str = "config/rules.json") -> Dict:
-    """Load matching rules from configuration."""
-    try:
-        with open(rules_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        return {"rules": {}}
+    """Load matching rules from configuration with caching."""
+    config_manager = _get_config_manager()
+    rules_config = config_manager.load_config(rules_path)
+    return rules_config.get("rules", {})
 
 
 def load_settings(settings_path: str = "config/settings.json") -> Dict:
-    """Load settings from configuration."""
-    try:
-        with open(settings_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        return {}
+    """Load settings from configuration with caching."""
+    config_manager = _get_config_manager()
+    return config_manager.load_config(settings_path)
 
 
 def evaluate_condition(record1: dict, record2: dict, condition: dict) -> bool:

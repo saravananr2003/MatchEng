@@ -1,5 +1,5 @@
 /**
- * MatchEng UI Components - Reusable UI component functions
+ * Matching Engine UI Components - Reusable UI component functions
  */
 
 /**

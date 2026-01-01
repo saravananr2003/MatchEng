@@ -150,15 +150,29 @@ def load_quality_metadata_from_db(db_path: str = None) -> Dict[str, Set[str]]:
     }
 
 
-# Load metadata once at module level
-_QUALITY_METADATA = load_quality_metadata_from_db()
-PERSONAL_DOMAINS = _QUALITY_METADATA['personal_domains']
-GENERIC_PREFIXES = _QUALITY_METADATA['generic_prefixes']
-DEPARTMENT_PREFIXES = _QUALITY_METADATA['department_prefixes']
-TOLL_FREE_CODES = _QUALITY_METADATA['toll_free_codes']
+# Lazy loading for performance - only load when needed
+_QUALITY_METADATA = None
+PERSONAL_DOMAINS = None
+GENERIC_PREFIXES = None
+DEPARTMENT_PREFIXES = None
+TOLL_FREE_CODES = None
+
+
+def _ensure_metadata_loaded():
+    """Lazy load quality metadata on first use."""
+    global _QUALITY_METADATA, PERSONAL_DOMAINS, GENERIC_PREFIXES, DEPARTMENT_PREFIXES, TOLL_FREE_CODES
+    
+    if _QUALITY_METADATA is None:
+        _QUALITY_METADATA = load_quality_metadata_from_db()
+        PERSONAL_DOMAINS = _QUALITY_METADATA['personal_domains']
+        GENERIC_PREFIXES = _QUALITY_METADATA['generic_prefixes']
+        DEPARTMENT_PREFIXES = _QUALITY_METADATA['department_prefixes']
+        TOLL_FREE_CODES = _QUALITY_METADATA['toll_free_codes']
 
 
 def calculate_email_quality(email: str, config: Dict = None) -> Dict[str, Any]:
+    """Calculate quality score for an email address."""
+    _ensure_metadata_loaded()
     """
     Calculate quality score for an email address.
     
@@ -218,6 +232,8 @@ def calculate_phone_quality(phone: str, extension: str = None, config: Dict = No
     
     Returns dict with individual criteria scores and total.
     """
+    _ensure_metadata_loaded()
+    
     result = {
         'has_10_digits': 0,
         'not_all_same': 0,

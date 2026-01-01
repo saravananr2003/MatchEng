@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# MatchEng UI Startup Script
+# Matching Engine UI Startup Script
 
 set -e
 
@@ -9,7 +9,7 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-echo -e "${GREEN}Starting MatchEng Configuration UI...${NC}"
+echo -e "${GREEN}Starting Matching Engine Configuration UI...${NC}"
 
 if ! command -v python3 &> /dev/null; then
     echo -e "${RED}Error: python3 is not installed${NC}"

@@ -1,5 +1,5 @@
 """
-MatchEng Framework - Core framework components for the matching engine.
+Matching Engine Framework - Core framework components for the matching engine.
 """
 
 from .response import APIResponse, SuccessResponse, ErrorResponse

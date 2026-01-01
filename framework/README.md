@@ -1,6 +1,6 @@
-# MatchEng Framework
+# Matching Engine Framework
 
-This directory contains the core framework components for the MatchEng application.
+This directory contains the core framework components for the Matching Engine application.
 
 ## Structure
 

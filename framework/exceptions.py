@@ -1,10 +1,10 @@
 """
-Custom exceptions for the MatchEng framework.
+Custom exceptions for the Matching Engine framework.
 """
 
 
 class MatchEngException(Exception):
-    """Base exception for MatchEng framework."""
+    """Base exception for Matching Engine framework."""
     pass
 
 

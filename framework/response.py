@@ -1,5 +1,5 @@
 """
-Standardized API response classes for the MatchEng framework.
+Standardized API response classes for the Matching Engine framework.
 """
 
 from typing import Any, Dict, Optional
